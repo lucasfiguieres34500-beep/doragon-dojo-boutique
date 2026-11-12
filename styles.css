@@ -923,21 +923,28 @@ body.is-landing .site-footer {
 }
 
 .icon-close-btn {
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: #ffffff;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.18s ease;
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
 }
 
 .icon-close-btn:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: #ffffff;
+  color: #071326;
+  border-color: #ffffff;
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.35);
 }
 
 .drawer-body {
@@ -1241,6 +1248,7 @@ body.is-landing .site-footer {
   position: absolute;
   top: 1rem;
   right: 1rem;
+  z-index: 60;
 }
 
 .product-modal-grid {
@@ -1796,7 +1804,7 @@ body.is-landing .site-footer {
   display: flex;
   align-items: center;
   gap: 0.95rem;
-  background: #ffffff;
+  background: #0c1e3d;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 1.15rem 1.25rem;
@@ -1807,8 +1815,8 @@ body.is-landing .site-footer {
   width: 46px;
   height: 46px;
   border-radius: 12px;
-  background: rgba(14, 45, 107, 0.08);
-  color: var(--club-navy);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1816,14 +1824,14 @@ body.is-landing .site-footer {
 }
 
 .stat-icon-warn {
-  background: var(--club-red-soft);
-  color: var(--club-red);
+  background: rgba(209, 54, 46, 0.2);
+  color: #f87171;
 }
 
 .stat-label {
   display: block;
   font-size: 0.8rem;
-  color: var(--ink-muted);
+  color: var(--ink-secondary);
   font-weight: 600;
 }
 
@@ -1831,7 +1839,7 @@ body.is-landing .site-footer {
   font-family: var(--font-display);
   font-size: 1.65rem;
   font-weight: 800;
-  color: var(--ink-primary);
+  color: #ffffff;
   line-height: 1.15;
 }
 
@@ -1879,7 +1887,7 @@ body.is-landing .site-footer {
 }
 
 .stock-card {
-  background: #ffffff;
+  background: #0c1e3d;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
@@ -1892,7 +1900,7 @@ body.is-landing .site-footer {
   gap: 0.9rem;
   padding: 1rem 1.15rem;
   border-bottom: 1px solid var(--border-subtle);
-  background: #ffffff;
+  background: #102954;
 }
 
 .stock-card-img {
@@ -1900,7 +1908,7 @@ body.is-landing .site-footer {
   height: 54px;
   border-radius: 10px;
   object-fit: contain;
-  background: #f4f5f7;
+  background: #ffffff;
   flex-shrink: 0;
 }
 
@@ -1908,6 +1916,7 @@ body.is-landing .site-footer {
   font-family: var(--font-display);
   margin: 0 0 0.15rem;
   font-size: 1.05rem;
+  color: #ffffff;
 }
 
 .stock-card-meta {
@@ -1919,9 +1928,9 @@ body.is-landing .site-footer {
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  border: 1px solid var(--border-subtle);
-  background: #ffffff;
-  color: var(--ink-muted);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1931,9 +1940,9 @@ body.is-landing .site-footer {
 }
 
 .stock-delete-btn:hover {
-  border-color: var(--club-red);
-  color: var(--club-red);
-  background: var(--club-red-soft);
+  border-color: #f87171;
+  color: #f87171;
+  background: rgba(209, 54, 46, 0.2);
 }
 
 /* Ajouter un article */
@@ -1954,7 +1963,7 @@ body.is-landing .site-footer {
   width: 100%;
   aspect-ratio: 1 / 1;
   border-radius: 12px;
-  background: #f4f5f7;
+  background: #ffffff;
   border: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
@@ -1981,9 +1990,9 @@ body.is-landing .site-footer {
 }
 
 .size-preset-pill {
-  border: 1px solid var(--border-strong);
-  background: var(--bg-page);
-  color: var(--ink-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
   border-radius: 999px;
   padding: 0.25rem 0.7rem;
   font-size: 0.76rem;
@@ -1993,7 +2002,15 @@ body.is-landing .site-footer {
 }
 
 .size-preset-pill:hover {
-  border-color: var(--club-navy);
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+select option {
+  background: #0c1e3d;
+  color: #ffffff;
+}
   color: var(--club-navy);
 }
 
@@ -2042,8 +2059,9 @@ body.is-landing .site-footer {
   min-width: 46px;
   padding: 0.25rem 0.55rem;
   border-radius: 7px;
-  background: var(--bg-page);
-  border: 1px solid var(--border-subtle);
+  background: #071326;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #ffffff;
   font-weight: 700;
   font-size: 0.84rem;
 }
@@ -2056,18 +2074,18 @@ body.is-landing .site-footer {
 }
 
 .stock-status-pill.is-ok {
-  background: rgba(24, 157, 76, 0.12);
-  color: #137a3b;
+  background: rgba(24, 157, 76, 0.18);
+  color: #38d37c;
 }
 
 .stock-status-pill.is-low {
-  background: rgba(212, 161, 62, 0.18);
-  color: #8a5a00;
+  background: rgba(229, 178, 76, 0.2);
+  color: #f0b842;
 }
 
 .stock-status-pill.is-out {
-  background: var(--club-red-soft);
-  color: var(--club-red);
+  background: rgba(209, 54, 46, 0.22);
+  color: #f87171;
 }
 
 .stock-controls {
@@ -2080,9 +2098,9 @@ body.is-landing .site-footer {
   width: 36px;
   height: 36px;
   border-radius: 9px;
-  border: 1px solid var(--border-strong);
-  background: #ffffff;
-  color: var(--ink-primary);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
   font-size: 1.15rem;
   font-weight: 700;
   cursor: pointer;
@@ -2094,19 +2112,20 @@ body.is-landing .site-footer {
 }
 
 .stock-btn:hover:not(:disabled) {
-  border-color: var(--club-navy);
-  color: var(--club-navy);
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
 }
 
 .stock-btn-plus {
-  background: var(--club-navy);
-  border-color: var(--club-navy);
-  color: #ffffff;
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #071326;
 }
 
 .stock-btn-plus:hover:not(:disabled) {
-  background: var(--club-navy-hover);
-  color: #ffffff;
+  background: #f0f4fc;
+  color: #071326;
 }
 
 .stock-btn:disabled {
@@ -2118,20 +2137,21 @@ body.is-landing .site-footer {
   width: 54px;
   height: 36px;
   text-align: center;
-  border: 1px solid var(--border-strong);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 9px;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--ink-primary);
-  background: var(--bg-page);
+  color: #ffffff;
+  background: #071326;
 }
 
 .gestion-panel {
-  background: #ffffff;
+  background: #0c1e3d;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 1.25rem;
   box-shadow: var(--shadow-sm);
+  color: #ffffff;
 }
 
 /* Écran de connexion gestion */
@@ -2151,12 +2171,13 @@ body.is-landing .site-footer {
 
 .auth-card {
   width: min(410px, 100%);
-  background: #ffffff;
+  background: #0c1e3d;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 2rem 1.65rem;
   box-shadow: var(--shadow-md);
   text-align: center;
+  color: #ffffff;
 }
 
 .auth-icon {
@@ -2164,8 +2185,8 @@ body.is-landing .site-footer {
   height: 54px;
   margin: 0 auto 1rem;
   border-radius: 14px;
-  background: rgba(14, 45, 107, 0.08);
-  color: var(--club-navy);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--club-gold);
   display: flex;
   align-items: center;
   justify-content: center;

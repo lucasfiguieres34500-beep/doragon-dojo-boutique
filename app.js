@@ -554,9 +554,14 @@
           <button type="button" class="btn btn-primary btn-full" id="modal-add-btn" ${modalStock <= 0 ? 'disabled' : ''}>
             ${modalStock <= 0 ? 'Rupture de stock' : `Ajouter au panier — ${formatEuro(product.price)}`}
           </button>
+          <button type="button" class="btn btn-secondary btn-full" id="modal-close-action-btn" style="margin-top:0.65rem;">
+            Fermer
+          </button>
         </div>
       </div>
     `;
+
+    document.getElementById('modal-close-action-btn').addEventListener('click', closeProductModal);
 
     if (product.backImage) {
       const modalImg = document.getElementById('modal-product-img');
