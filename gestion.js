@@ -18,6 +18,7 @@
     products: Array.isArray(initialProducts) && initialProducts.length ? initialProducts : DEFAULT_PRODUCTS,
     stock: loadStockLocal(Array.isArray(initialProducts) && initialProducts.length ? initialProducts : DEFAULT_PRODUCTS),
     orders: loadJson(STORAGE_KEYS.ORDERS, []),
+    members: [],
     settings: { ...DEFAULT_SETTINGS, ...loadJson(STORAGE_KEYS.SETTINGS, {}) },
     pendingImageDataUrl: null
   };
@@ -49,6 +50,8 @@
     addProdSubmitBtn: document.getElementById('add-prod-submit-btn'),
     sizePresetsRow: document.getElementById('size-presets-row'),
     ordersList: document.getElementById('gestion-orders-list'),
+    membersList: document.getElementById('gestion-members-list'),
+    membersBadge: document.getElementById('gestion-members-badge'),
     exportCsvBtn: document.getElementById('gestion-export-csv'),
     clearOrdersBtn: document.getElementById('gestion-clear-orders'),
     settingsForm: document.getElementById('gestion-settings-form'),
@@ -131,6 +134,7 @@
     els.lockBtn.hidden = false;
     els.authError.hidden = true;
     await syncFromServer();
+    await fetchAndRenderMembers();
     renderStats();
     renderStockCards();
     renderOrders();
@@ -486,6 +490,51 @@
         </div>
         <div>
           ${order.items.map((i) => `${i.qty}× ${escapeHtml(i.name)} (${escapeHtml(i.size)})`).join(' · ')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function fetchAndRenderMembers() {
+    if (!window.location.protocol.startsWith('http')) {
+      renderMembers();
+      return;
+    }
+    try {
+      const res = await fetch('/api/admin/members');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.members)) {
+          state.members = data.members;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    renderMembers();
+  }
+
+  function renderMembers() {
+    if (!els.membersList) return;
+    const count = (state.members || []).length;
+    if (els.membersBadge) {
+      els.membersBadge.textContent = `${count} adhérent${count > 1 ? 's' : ''}`;
+    }
+    if (count === 0) {
+      els.membersList.innerHTML = '<p style="color:var(--ink-muted);font-size:0.9rem;margin:0;">Aucun compte adhérent créé pour le moment.</p>';
+      return;
+    }
+    els.membersList.innerHTML = state.members.map((m) => `
+      <div class="admin-order-row">
+        <div class="admin-order-top">
+          <span><strong>${escapeHtml(m.name)}</strong> (${escapeHtml(m.email)})</span>
+          <span><strong>${m.ordersCount || 0} commande${(m.ordersCount || 0) > 1 ? 's' : ''}</strong> · ${formatEuro(m.totalSpent || 0)}</span>
+        </div>
+        <div style="color:var(--ink-secondary);font-size:0.85rem;margin-top:0.25rem;">
+          ${m.phone ? `Tél : <strong>${escapeHtml(m.phone)}</strong> · ` : ''}
+          Rashguard : <strong>${escapeHtml(m.favoriteRashguardSize || 'N/A')}</strong> · 
+          Gants : <strong>${escapeHtml(m.favoriteGlovesSize || 'N/A')}</strong>
+          ${m.createdAt ? ` · Inscrit le ${new Date(m.createdAt).toLocaleDateString('fr-FR')}` : ''}
         </div>
       </div>
     `).join('');

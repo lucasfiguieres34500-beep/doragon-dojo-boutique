@@ -2278,3 +2278,405 @@ select option {
     display: none !important;
   }
 }
+
+/* ==========================================================================
+   ESPACE ADHÉRENT & AUTHENTIFICATION (DORAGON DOJO CLUB)
+   ========================================================================== */
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.account-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 0.58rem 1.05rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.account-trigger:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(229, 178, 76, 0.45);
+  transform: translateY(-1px);
+}
+
+.account-trigger:active {
+  transform: scale(0.97);
+}
+
+.account-trigger.is-logged {
+  background: rgba(229, 178, 76, 0.14);
+  border-color: rgba(229, 178, 76, 0.4);
+  color: #ffffff;
+}
+
+.account-trigger.is-logged:hover {
+  background: rgba(229, 178, 76, 0.24);
+  border-color: var(--club-gold);
+}
+
+.account-trigger-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.account-avatar-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--club-gold), #b8860b);
+  color: #071326;
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+
+/* Bannière adhérent dans le panier */
+.cart-member-banner {
+  margin-bottom: 1.25rem;
+}
+
+.cart-member-box {
+  background: #0c1e3d;
+  border: 1px solid rgba(229, 178, 76, 0.25);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cart-member-box.is-guest {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.cart-member-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.85rem;
+}
+
+.cart-member-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--club-gold);
+}
+
+.cart-member-name {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.cart-member-sub {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+}
+
+.btn-text-link {
+  background: transparent;
+  border: none;
+  color: var(--club-gold);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  transition: opacity 0.18s ease;
+}
+
+.btn-text-link:hover {
+  opacity: 0.8;
+}
+
+/* Modal Compte */
+.modal-dialog-account {
+  max-width: 520px;
+  width: 92%;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #0c1e3d;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 40px rgba(35, 95, 215, 0.25);
+  padding: 2rem;
+  color: #ffffff;
+}
+
+.account-modal-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.account-header-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--club-gold);
+  background: rgba(229, 178, 76, 0.12);
+  border: 1px solid rgba(229, 178, 76, 0.3);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.modal-subheading {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin: 0.35rem 0 0;
+}
+
+.account-segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  background: rgba(7, 19, 38, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 0.3rem;
+  margin-bottom: 1.5rem;
+}
+
+.account-tab-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.account-tab-btn:hover {
+  color: #ffffff;
+}
+
+.account-tab-btn.is-active {
+  background: #0c1e3d;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.05rem;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.input-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: rgba(0, 0, 0, 0.25) !important;
+}
+
+.account-form-switch {
+  text-align: center;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.account-alert {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin-top: 0.25rem;
+}
+
+.account-alert-error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.account-alert-success {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+}
+
+/* Profil connecté */
+.account-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(7, 19, 38, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.account-avatar-large {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--club-gold), #b8860b);
+  color: #071326;
+  font-size: 1.25rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.account-profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.account-profile-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--club-gold);
+}
+
+.account-profile-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0.15rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-profile-email {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.65);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Historique commandes adhérent */
+.member-orders-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
+
+.member-order-card {
+  background: rgba(7, 19, 38, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  transition: border-color 0.18s ease;
+}
+
+.member-order-card:hover {
+  border-color: rgba(229, 178, 76, 0.35);
+}
+
+.member-order-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.member-order-ref {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--club-gold);
+  font-size: 0.95rem;
+}
+
+.member-order-date {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.member-order-items {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.45;
+}
+
+.member-order-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.member-order-total {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.member-order-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+  .header-actions {
+    gap: 0.4rem;
+  }
+  .account-trigger {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.82rem;
+  }
+  .modal-dialog-account {
+    padding: 1.35rem 1.15rem;
+  }
+  .form-row-2 {
+    grid-template-columns: 1fr;
+  }
+}
+

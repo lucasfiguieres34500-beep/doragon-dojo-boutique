@@ -15,11 +15,15 @@ const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
 const STOCK_FILE = path.join(DATA_DIR, 'stock.json');
 const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
 const AUTH_FILE = path.join(DATA_DIR, 'admin-auth.json');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const UPLOADS_DIR = path.join(ROOT_DIR, 'assets', 'uploads');
 const LOGO_PATH = path.join(ROOT_DIR, 'assets', 'logo.jpg');
 const SESSION_COOKIE = 'club_admin_session';
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const activeSessions = new Map();
+const MEMBER_SESSION_COOKIE = 'doragon_member_token';
+const MEMBER_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const activeMemberSessions = new Map();
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -350,6 +354,72 @@ function saveAdminPassword(newPassword) {
   fs.writeFileSync(AUTH_FILE, JSON.stringify({ salt, hash }, null, 2), 'utf8');
 }
 
+function readUsers() {
+  try {
+    if (!fs.existsSync(USERS_FILE)) return [];
+    const raw = fs.readFileSync(USERS_FILE, 'utf8');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveUsers(users) {
+  ensureDataDir();
+  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
+}
+
+function sanitizeUser(user) {
+  if (!user) return null;
+  const { salt, hash, ...safe } = user;
+  return safe;
+}
+
+function hashMemberPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return { salt, hash };
+}
+
+function verifyMemberPassword(password, salt, hash) {
+  try {
+    const expected = Buffer.from(hash, 'hex');
+    const derived = crypto.scryptSync(password, salt, expected.length);
+    return expected.length === derived.length && crypto.timingSafeEqual(expected, derived);
+  } catch {
+    return false;
+  }
+}
+
+function getAuthenticatedMember(req) {
+  const cookies = parseCookies(req);
+  const token = cookies[MEMBER_SESSION_COOKIE];
+  if (!token) return null;
+  const session = activeMemberSessions.get(token);
+  if (!session) return null;
+  if (Date.now() > session.expiresAt) {
+    activeMemberSessions.delete(token);
+    return null;
+  }
+  const users = readUsers();
+  return users.find((u) => u.id === session.userId) || null;
+}
+
+function createMemberSession(userId) {
+  const token = crypto.randomBytes(32).toString('hex');
+  activeMemberSessions.set(token, {
+    userId,
+    expiresAt: Date.now() + MEMBER_SESSION_TTL_MS
+  });
+  return `${MEMBER_SESSION_COOKIE}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${MEMBER_SESSION_TTL_MS / 1000}`;
+}
+
+function clearMemberSession(req) {
+  const token = parseCookies(req)[MEMBER_SESSION_COOKIE];
+  if (token) activeMemberSessions.delete(token);
+  return `${MEMBER_SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`;
+}
+
 function serveStatic(reqPath, res) {
   const safePath = path.normalize(reqPath === '/' ? 'index.html' : reqPath.replace(/^\/+/, ''));
   const fullPath = path.join(ROOT_DIR, safePath);
@@ -400,6 +470,157 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && urlPath === '/api/admin/logout') {
     const cookie = clearSession(req);
     return sendJson(res, 200, { ok: true, authenticated: false }, { 'Set-Cookie': cookie });
+  }
+
+  // --- Espace Adhérent Auth Endpoints ---
+  if (req.method === 'GET' && urlPath === '/api/member/me') {
+    const member = getAuthenticatedMember(req);
+    if (!member) {
+      return sendJson(res, 200, { ok: true, authenticated: false, user: null, orders: [] });
+    }
+    const allOrders = readOrders();
+    const memberOrders = allOrders.filter(
+      (o) => (o.memberId && o.memberId === member.id) || (o.memberEmail && o.memberEmail.toLowerCase() === member.email.toLowerCase())
+    );
+    return sendJson(res, 200, {
+      ok: true,
+      authenticated: true,
+      user: sanitizeUser(member),
+      orders: memberOrders
+    });
+  }
+
+  if (req.method === 'POST' && urlPath === '/api/member/register') {
+    try {
+      const body = await readJsonBody(req);
+      const email = String(body.email || '').trim().toLowerCase();
+      const password = String(body.password || '').trim();
+      const name = String(body.name || '').trim();
+      const phone = String(body.phone || '').trim();
+      const favoriteRashguardSize = String(body.favoriteRashguardSize || 'M').trim();
+      const favoriteGlovesSize = String(body.favoriteGlovesSize || 'L/XL').trim();
+
+      if (!name || name.length < 2) {
+        return sendJson(res, 400, { ok: false, error: 'Nom et prénom requis (au moins 2 caractères).' });
+      }
+      if (!email || !email.includes('@')) {
+        return sendJson(res, 400, { ok: false, error: 'Adresse email valide requise.' });
+      }
+      if (!password || password.length < 6) {
+        return sendJson(res, 400, { ok: false, error: 'Le mot de passe doit comporter au moins 6 caractères.' });
+      }
+
+      const users = readUsers();
+      if (users.some((u) => u.email.toLowerCase() === email)) {
+        return sendJson(res, 400, { ok: false, error: 'Cet email est déjà associé à un compte adhérent.' });
+      }
+
+      const { salt, hash } = hashMemberPassword(password);
+      const newUser = {
+        id: 'usr_' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'),
+        name,
+        email,
+        phone,
+        favoriteRashguardSize,
+        favoriteGlovesSize,
+        salt,
+        hash,
+        createdAt: new Date().toISOString()
+      };
+
+      users.push(newUser);
+      saveUsers(users);
+
+      const cookie = createMemberSession(newUser.id);
+      return sendJson(res, 200, {
+        ok: true,
+        authenticated: true,
+        user: sanitizeUser(newUser),
+        orders: []
+      }, { 'Set-Cookie': cookie });
+    } catch (err) {
+      return sendJson(res, 400, { ok: false, error: err.message });
+    }
+  }
+
+  if (req.method === 'POST' && urlPath === '/api/member/login') {
+    try {
+      const body = await readJsonBody(req);
+      const email = String(body.email || '').trim().toLowerCase();
+      const password = String(body.password || '').trim();
+
+      if (!email || !password) {
+        return sendJson(res, 400, { ok: false, error: 'Email et mot de passe requis.' });
+      }
+
+      const users = readUsers();
+      const user = users.find((u) => u.email.toLowerCase() === email);
+      if (!user || !user.salt || !user.hash || !verifyMemberPassword(password, user.salt, user.hash)) {
+        return sendJson(res, 401, { ok: false, error: 'Email ou mot de passe incorrect.' });
+      }
+
+      const cookie = createMemberSession(user.id);
+      const allOrders = readOrders();
+      const memberOrders = allOrders.filter(
+        (o) => (o.memberId && o.memberId === user.id) || (o.memberEmail && o.memberEmail.toLowerCase() === user.email.toLowerCase())
+      );
+
+      return sendJson(res, 200, {
+        ok: true,
+        authenticated: true,
+        user: sanitizeUser(user),
+        orders: memberOrders
+      }, { 'Set-Cookie': cookie });
+    } catch (err) {
+      return sendJson(res, 400, { ok: false, error: err.message });
+    }
+  }
+
+  if (req.method === 'POST' && urlPath === '/api/member/logout') {
+    const cookie = clearMemberSession(req);
+    return sendJson(res, 200, { ok: true, authenticated: false }, { 'Set-Cookie': cookie });
+  }
+
+  if (req.method === 'POST' && urlPath === '/api/member/update-profile') {
+    const member = getAuthenticatedMember(req);
+    if (!member) {
+      return sendJson(res, 401, { ok: false, error: 'Authentification requise.' });
+    }
+    try {
+      const body = await readJsonBody(req);
+      const users = readUsers();
+      const idx = users.findIndex((u) => u.id === member.id);
+      if (idx === -1) {
+        return sendJson(res, 404, { ok: false, error: 'Utilisateur introuvable.' });
+      }
+      if (body.name) users[idx].name = String(body.name).trim();
+      if (body.phone !== undefined) users[idx].phone = String(body.phone).trim();
+      if (body.favoriteRashguardSize) users[idx].favoriteRashguardSize = String(body.favoriteRashguardSize).trim();
+      if (body.favoriteGlovesSize) users[idx].favoriteGlovesSize = String(body.favoriteGlovesSize).trim();
+      saveUsers(users);
+
+      return sendJson(res, 200, { ok: true, user: sanitizeUser(users[idx]) });
+    } catch (err) {
+      return sendJson(res, 400, { ok: false, error: err.message });
+    }
+  }
+
+  if (req.method === 'GET' && urlPath === '/api/admin/members') {
+    if (!isAuthenticated(req)) {
+      return sendJson(res, 401, { ok: false, error: 'Authentification requise.' });
+    }
+    const users = readUsers().map(sanitizeUser);
+    const orders = readOrders();
+    const membersWithStats = users.map((u) => {
+      const uOrders = orders.filter((o) => (o.memberId && o.memberId === u.id) || (o.memberEmail && o.memberEmail.toLowerCase() === u.email.toLowerCase()));
+      const totalSpent = uOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+      return {
+        ...u,
+        ordersCount: uOrders.length,
+        totalSpent
+      };
+    });
+    return sendJson(res, 200, { ok: true, members: membersWithStats });
   }
 
   if (req.method === 'POST' && urlPath === '/api/admin/password') {
@@ -590,9 +811,11 @@ const server = http.createServer(async (req, res) => {
       }
       const updatedStock = saveStock(currentStock);
 
+      const authMember = getAuthenticatedMember(req);
       const clubName = String(body.clubName || process.env.CLUB_NAME || 'DORAGON DOJO CLUB').trim();
       const order = {
         ref: String(body.ref || `CLUB-${Math.floor(1000 + Math.random() * 9000)}`),
+        memberId: authMember ? authMember.id : (body.memberId || null),
         createdAt: body.createdAt || new Date().toISOString(),
         dateLabel: body.dateLabel || new Date().toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }),
         memberName,

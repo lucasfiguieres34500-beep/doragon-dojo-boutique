@@ -28,7 +28,9 @@
     cart: loadJson(STORAGE_KEYS.CART, []),
     settings: { ...DEFAULT_SETTINGS, ...loadJson(STORAGE_KEYS.SETTINGS, {}) },
     orders: loadJson(STORAGE_KEYS.ORDERS, []),
-    lastOrder: null
+    lastOrder: null,
+    member: null,
+    memberOrders: []
   };
 
   const els = {
@@ -71,7 +73,40 @@
     landingClubName: document.getElementById('landing-club-name'),
     footerClubName: document.getElementById('footer-club-name'),
     footerClubNote: document.getElementById('footer-club-note'),
-    toast: document.getElementById('toast')
+    toast: document.getElementById('toast'),
+    accountBtn: document.getElementById('account-btn'),
+    accountBtnAvatar: document.getElementById('account-btn-avatar'),
+    accountBtnLabel: document.getElementById('account-btn-label'),
+    accountModalBackdrop: document.getElementById('account-modal-backdrop'),
+    closeAccountModalBtn: document.getElementById('close-account-modal-btn'),
+    accountGuestView: document.getElementById('account-guest-view'),
+    accountLoggedView: document.getElementById('account-logged-view'),
+    tabLoginBtn: document.getElementById('tab-login-btn'),
+    tabRegisterBtn: document.getElementById('tab-register-btn'),
+    memberLoginForm: document.getElementById('member-login-form'),
+    memberRegisterForm: document.getElementById('member-register-form'),
+    loginErrorMsg: document.getElementById('login-error-msg'),
+    registerErrorMsg: document.getElementById('register-error-msg'),
+    switchToRegisterBtn: document.getElementById('switch-to-register'),
+    switchToLoginBtn: document.getElementById('switch-to-login'),
+    profileAvatarInitials: document.getElementById('profile-avatar-initials'),
+    profileDisplayName: document.getElementById('profile-display-name'),
+    profileDisplayEmail: document.getElementById('profile-display-email'),
+    btnLogout: document.getElementById('btn-logout'),
+    tabMemberOrdersBtn: document.getElementById('tab-member-orders-btn'),
+    tabMemberProfileBtn: document.getElementById('tab-member-profile-btn'),
+    loggedPanelOrders: document.getElementById('logged-panel-orders'),
+    loggedPanelProfile: document.getElementById('logged-panel-profile'),
+    memberOrdersContainer: document.getElementById('member-orders-container'),
+    memberProfileForm: document.getElementById('member-profile-form'),
+    profName: document.getElementById('prof-name'),
+    profEmail: document.getElementById('prof-email'),
+    profPhone: document.getElementById('prof-phone'),
+    profRashguardSize: document.getElementById('prof-rashguard-size'),
+    profGlovesSize: document.getElementById('prof-gloves-size'),
+    profileSuccessMsg: document.getElementById('profile-success-msg'),
+    profileErrorMsg: document.getElementById('profile-error-msg'),
+    cartMemberBanner: document.getElementById('cart-member-banner'),
   };
 
   let toastTimer = null;
@@ -707,7 +742,8 @@
           body: JSON.stringify({
             ...order,
             clubName: state.settings.clubName,
-            clubEmail: state.settings.email
+            clubEmail: state.settings.email,
+            memberId: state.member ? state.member.id : null
           })
         });
         const data = await res.json();
@@ -751,6 +787,7 @@
     els.submitOrderBtn.textContent = 'Confirmer la commande';
 
     state.orders.unshift(order);
+      if (state.member) { state.memberOrders.unshift(order); }
     saveJson(STORAGE_KEYS.ORDERS, state.orders);
     state.lastOrder = { ...order, emailResult };
     state.cart = [];
@@ -809,8 +846,389 @@
     els.sendEmailBtn.href = `mailto:${encodeURIComponent(recipient)}?subject=${subject}&body=${encodedText}`;
   }
 
+  
+  /* ==========================================================================
+     GESTION DU COMPTE ADHÉRENT (FRONTEND)
+     ========================================================================== */
+
+  function getInitials(name) {
+    if (!name) return 'DD';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function updateMemberUi() {
+    if (!els.accountBtn) return;
+    if (state.member) {
+      els.accountBtn.classList.add('is-logged');
+      const firstName = state.member.name.split(' ')[0] || state.member.name;
+      els.accountBtnLabel.textContent = firstName;
+      const initials = getInitials(state.member.name);
+      els.accountBtnAvatar.innerHTML = `<span class="account-avatar-dot">${escapeHtml(initials)}</span>`;
+
+      // Profile view inputs
+      if (els.profileAvatarInitials) els.profileAvatarInitials.textContent = initials;
+      if (els.profileDisplayName) els.profileDisplayName.textContent = state.member.name;
+      if (els.profileDisplayEmail) els.profileDisplayEmail.textContent = state.member.email;
+      if (els.profName) els.profName.value = state.member.name || '';
+      if (els.profEmail) els.profEmail.value = state.member.email || '';
+      if (els.profPhone) els.profPhone.value = state.member.phone || '';
+      if (els.profRashguardSize) els.profRashguardSize.value = state.member.favoriteRashguardSize || '';
+      if (els.profGlovesSize) els.profGlovesSize.value = state.member.favoriteGlovesSize || '';
+
+      // Auto-fill checkout fields if empty
+      const nameInput = document.getElementById('member-name');
+      const emailInput = document.getElementById('member-email');
+      const phoneInput = document.getElementById('member-phone');
+      if (nameInput && !nameInput.value) nameInput.value = state.member.name;
+      if (emailInput && !emailInput.value) emailInput.value = state.member.email;
+      if (phoneInput && state.member.phone && !phoneInput.value) phoneInput.value = state.member.phone;
+    } else {
+      els.accountBtn.classList.remove('is-logged');
+      els.accountBtnLabel.textContent = 'Espace Adhérent';
+      els.accountBtnAvatar.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>`;
+    }
+    renderCartMemberBanner();
+  }
+
+  function renderCartMemberBanner() {
+    if (!els.cartMemberBanner) return;
+    if (state.member) {
+      els.cartMemberBanner.innerHTML = `
+        <div class="cart-member-box">
+          <div class="cart-member-info">
+            <span class="cart-member-tag">Adhérent connecté</span>
+            <span class="cart-member-name">${escapeHtml(state.member.name)}</span>
+            <span class="cart-member-sub">${escapeHtml(state.member.email)}</span>
+          </div>
+          <button type="button" class="btn-text-link" id="cart-member-account-btn">Gérer mon compte</button>
+        </div>
+      `;
+      const btn = document.getElementById('cart-member-account-btn');
+      if (btn) btn.onclick = () => openAccountModal('orders');
+    } else {
+      els.cartMemberBanner.innerHTML = `
+        <div class="cart-member-box is-guest">
+          <div class="cart-member-info">
+            <span class="cart-member-name">Vous êtes adhérent du club ?</span>
+            <span class="cart-member-sub">Connectez-vous pour pré-remplir vos coordonnées et suivre vos commandes.</span>
+          </div>
+          <button type="button" class="btn-text-link" id="cart-quick-login-btn">Se connecter</button>
+        </div>
+      `;
+      const btn = document.getElementById('cart-quick-login-btn');
+      if (btn) btn.onclick = () => openAccountModal('login');
+    }
+  }
+
+  function applyMemberPreferences() {
+    if (!state.member) return;
+    if (state.member.favoriteRashguardSize) {
+      state.products.forEach((p) => {
+        if (p.category === 'rashguard' && Array.isArray(p.sizes) && p.sizes.includes(state.member.favoriteRashguardSize)) {
+          state.selectedSizes[p.id] = state.member.favoriteRashguardSize;
+        }
+      });
+    }
+    if (state.member.favoriteGlovesSize) {
+      state.products.forEach((p) => {
+        if (p.category === 'gants' && Array.isArray(p.sizes) && p.sizes.includes(state.member.favoriteGlovesSize)) {
+          state.selectedSizes[p.id] = state.member.favoriteGlovesSize;
+        }
+      });
+    }
+    renderProducts();
+  }
+
+  function renderMemberOrders() {
+    if (!els.memberOrdersContainer) return;
+    if (!state.memberOrders || state.memberOrders.length === 0) {
+      els.memberOrdersContainer.innerHTML = `
+        <div class="member-order-empty">
+          <p>Aucune commande enregistrée pour le moment.</p>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-browse-from-account">Découvrir les équipements</button>
+        </div>
+      `;
+      const browseBtn = document.getElementById('btn-browse-from-account');
+      if (browseBtn) {
+        browseBtn.onclick = () => {
+          closeAccountModal();
+          if (state.view === 'landing') enterShop('all');
+        };
+      }
+      return;
+    }
+
+    els.memberOrdersContainer.innerHTML = state.memberOrders.map((order) => {
+      const itemsSummary = (order.items || []).map((it) => `${it.qty}x ${escapeHtml(it.name)} (Taille ${escapeHtml(it.size)})`).join(', ');
+      return `
+        <div class="member-order-card">
+          <div class="member-order-header">
+            <span class="member-order-ref">${escapeHtml(order.ref)}</span>
+            <span class="member-order-date">${escapeHtml(order.dateLabel || order.createdAt ? new Date(order.createdAt).toLocaleDateString('fr-FR') : '')}</span>
+          </div>
+          <div class="member-order-items">${itemsSummary}</div>
+          <div class="member-order-footer">
+            <span>Règlement : <strong>${escapeHtml(order.paymentMethod || 'Sur place au club')}</strong></span>
+            <span class="member-order-total">${formatEuro(order.total || 0)}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function openAccountModal(targetTab) {
+    if (!els.accountModalBackdrop) return;
+    if (state.member) {
+      els.accountGuestView.hidden = true;
+      els.accountLoggedView.hidden = false;
+      switchLoggedTab(targetTab === 'profile' ? 'profile' : 'orders');
+      renderMemberOrders();
+    } else {
+      els.accountGuestView.hidden = false;
+      els.accountLoggedView.hidden = true;
+      switchGuestTab(targetTab === 'register' ? 'register' : 'login');
+    }
+    els.accountModalBackdrop.classList.add('is-open');
+    els.accountModalBackdrop.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeAccountModal() {
+    if (!els.accountModalBackdrop) return;
+    els.accountModalBackdrop.classList.remove('is-open');
+    els.accountModalBackdrop.setAttribute('aria-hidden', 'true');
+    if (els.loginErrorMsg) els.loginErrorMsg.hidden = true;
+    if (els.registerErrorMsg) els.registerErrorMsg.hidden = true;
+    if (els.profileSuccessMsg) els.profileSuccessMsg.hidden = true;
+    if (els.profileErrorMsg) els.profileErrorMsg.hidden = true;
+  }
+
+  function switchGuestTab(tab) {
+    if (tab === 'register') {
+      els.tabLoginBtn.classList.remove('is-active');
+      els.tabRegisterBtn.classList.add('is-active');
+      els.memberLoginForm.hidden = true;
+      els.memberRegisterForm.hidden = false;
+    } else {
+      els.tabLoginBtn.classList.add('is-active');
+      els.tabRegisterBtn.classList.remove('is-active');
+      els.memberLoginForm.hidden = false;
+      els.memberRegisterForm.hidden = true;
+    }
+    if (els.loginErrorMsg) els.loginErrorMsg.hidden = true;
+    if (els.registerErrorMsg) els.registerErrorMsg.hidden = true;
+  }
+
+  function switchLoggedTab(tab) {
+    if (tab === 'profile') {
+      els.tabMemberOrdersBtn.classList.remove('is-active');
+      els.tabMemberProfileBtn.classList.add('is-active');
+      els.loggedPanelOrders.hidden = true;
+      els.loggedPanelProfile.hidden = false;
+    } else {
+      els.tabMemberOrdersBtn.classList.add('is-active');
+      els.tabMemberProfileBtn.classList.remove('is-active');
+      els.loggedPanelOrders.hidden = false;
+      els.loggedPanelProfile.hidden = true;
+      renderMemberOrders();
+    }
+    if (els.profileSuccessMsg) els.profileSuccessMsg.hidden = true;
+    if (els.profileErrorMsg) els.profileErrorMsg.hidden = true;
+  }
+
+  async function checkMemberSession() {
+    if (!window.location.protocol.startsWith('http')) return;
+    try {
+      const res = await fetch('/api/member/me');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.authenticated && data.user) {
+          state.member = data.user;
+          state.memberOrders = Array.isArray(data.orders) ? data.orders : [];
+          updateMemberUi();
+          applyMemberPreferences();
+        } else {
+          state.member = null;
+          state.memberOrders = [];
+          updateMemberUi();
+        }
+      }
+    } catch {
+      // Offline fallback
+    }
+  }
+
+  async function handleMemberLogin(e) {
+    e.preventDefault();
+    const email = (document.getElementById('login-email').value || '').trim();
+    const password = document.getElementById('login-password').value || '';
+    const btn = document.getElementById('btn-submit-login');
+
+    if (!email || !password) return;
+    btn.disabled = true;
+    btn.textContent = 'Connexion...';
+    els.loginErrorMsg.hidden = true;
+
+    try {
+      const res = await fetch('/api/member/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json().catch(() => ({}));
+      btn.disabled = false;
+      btn.textContent = 'Se connecter';
+
+      if (!res.ok || !data.ok) {
+        els.loginErrorMsg.textContent = data.error || 'Email ou mot de passe incorrect.';
+        els.loginErrorMsg.hidden = false;
+        return;
+      }
+
+      state.member = data.user;
+      state.memberOrders = Array.isArray(data.orders) ? data.orders : [];
+      updateMemberUi();
+      applyMemberPreferences();
+      showToast(`Bienvenue ${state.member.name} !`);
+      closeAccountModal();
+    } catch {
+      btn.disabled = false;
+      btn.textContent = 'Se connecter';
+      els.loginErrorMsg.textContent = 'Erreur réseau, veuillez réessayer.';
+      els.loginErrorMsg.hidden = false;
+    }
+  }
+
+  async function handleMemberRegister(e) {
+    e.preventDefault();
+    const name = (document.getElementById('reg-name').value || '').trim();
+    const email = (document.getElementById('reg-email').value || '').trim();
+    const phone = (document.getElementById('reg-phone').value || '').trim();
+    const password = document.getElementById('reg-password').value || '';
+    const favoriteRashguardSize = document.getElementById('reg-rashguard-size').value;
+    const favoriteGlovesSize = document.getElementById('reg-gloves-size').value;
+    const btn = document.getElementById('btn-submit-register');
+
+    if (!name || !email || !password) return;
+    btn.disabled = true;
+    btn.textContent = 'Création du compte...';
+    els.registerErrorMsg.hidden = true;
+
+    try {
+      const res = await fetch('/api/member/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          password,
+          favoriteRashguardSize,
+          favoriteGlovesSize
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      btn.disabled = false;
+      btn.textContent = 'Créer mon compte';
+
+      if (!res.ok || !data.ok) {
+        els.registerErrorMsg.textContent = data.error || 'Erreur lors de la création du compte.';
+        els.registerErrorMsg.hidden = false;
+        return;
+      }
+
+      state.member = data.user;
+      state.memberOrders = [];
+      updateMemberUi();
+      applyMemberPreferences();
+      showToast('Votre compte adhérent a été créé avec succès !');
+      closeAccountModal();
+    } catch {
+      btn.disabled = false;
+      btn.textContent = 'Créer mon compte';
+      els.registerErrorMsg.textContent = 'Erreur réseau, veuillez réessayer.';
+      els.registerErrorMsg.hidden = false;
+    }
+  }
+
+  async function handleMemberLogout() {
+    try {
+      await fetch('/api/member/logout', { method: 'POST' });
+    } catch {
+      // ignore
+    }
+    state.member = null;
+    state.memberOrders = [];
+    updateMemberUi();
+    showToast('Vous avez été déconnecté.');
+    closeAccountModal();
+  }
+
+  async function handleMemberProfileUpdate(e) {
+    e.preventDefault();
+    const name = (els.profName.value || '').trim();
+    const phone = (els.profPhone.value || '').trim();
+    const favoriteRashguardSize = els.profRashguardSize.value;
+    const favoriteGlovesSize = els.profGlovesSize.value;
+    const btn = document.getElementById('btn-save-profile');
+
+    btn.disabled = true;
+    btn.textContent = 'Enregistrement...';
+    els.profileSuccessMsg.hidden = true;
+    els.profileErrorMsg.hidden = true;
+
+    try {
+      const res = await fetch('/api/member/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, favoriteRashguardSize, favoriteGlovesSize })
+      });
+      const data = await res.json().catch(() => ({}));
+      btn.disabled = false;
+      btn.textContent = 'Enregistrer mes préférences';
+
+      if (!res.ok || !data.ok) {
+        els.profileErrorMsg.textContent = data.error || 'Impossible d\'enregistrer.';
+        els.profileErrorMsg.hidden = false;
+        return;
+      }
+
+      state.member = data.user;
+      updateMemberUi();
+      applyMemberPreferences();
+      els.profileSuccessMsg.textContent = 'Préférences mises à jour avec succès !';
+      els.profileSuccessMsg.hidden = false;
+      showToast('Profil mis à jour');
+    } catch {
+      btn.disabled = false;
+      btn.textContent = 'Enregistrer mes préférences';
+      els.profileErrorMsg.textContent = 'Erreur de connexion.';
+      els.profileErrorMsg.hidden = false;
+    }
+  }
+
   function bindEvents() {
     els.enterShopBtn.addEventListener('click', () => enterShop('all'));
+
+    if (els.accountBtn) els.accountBtn.addEventListener('click', () => openAccountModal());
+    if (els.closeAccountModalBtn) els.closeAccountModalBtn.addEventListener('click', closeAccountModal);
+    if (els.accountModalBackdrop) {
+      els.accountModalBackdrop.addEventListener('click', (e) => {
+        if (e.target === els.accountModalBackdrop) closeAccountModal();
+      });
+    }
+    if (els.tabLoginBtn) els.tabLoginBtn.addEventListener('click', () => switchGuestTab('login'));
+    if (els.tabRegisterBtn) els.tabRegisterBtn.addEventListener('click', () => switchGuestTab('register'));
+    if (els.switchToRegisterBtn) els.switchToRegisterBtn.addEventListener('click', () => switchGuestTab('register'));
+    if (els.switchToLoginBtn) els.switchToLoginBtn.addEventListener('click', () => switchGuestTab('login'));
+    if (els.tabMemberOrdersBtn) els.tabMemberOrdersBtn.addEventListener('click', () => switchLoggedTab('orders'));
+    if (els.tabMemberProfileBtn) els.tabMemberProfileBtn.addEventListener('click', () => switchLoggedTab('profile'));
+    if (els.memberLoginForm) els.memberLoginForm.addEventListener('submit', handleMemberLogin);
+    if (els.memberRegisterForm) els.memberRegisterForm.addEventListener('submit', handleMemberRegister);
+    if (els.btnLogout) els.btnLogout.addEventListener('click', handleMemberLogout);
+    if (els.memberProfileForm) els.memberProfileForm.addEventListener('submit', handleMemberProfileUpdate);
+
     els.brandHomeBtn.addEventListener('click', showLanding);
 
     els.filterBtns.forEach((btn) => {
