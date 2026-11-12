@@ -783,11 +783,12 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await readJsonBody(req);
       const memberName = String(body.memberName || '').trim();
-      const memberEmail = String(body.memberEmail || '').trim();
+      const authMember = getAuthenticatedMember(req);
+      const memberEmail = String(body.memberEmail || (authMember ? authMember.email : '')).trim();
       const items = Array.isArray(body.items) ? body.items : [];
 
-      if (!memberName || !memberEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(memberEmail) || items.length === 0) {
-        return sendJson(res, 400, { ok: false, error: 'Nom, email valide et articles requis.' });
+      if (!memberName || items.length === 0) {
+        return sendJson(res, 400, { ok: false, error: 'Nom complet et articles dans le panier requis.' });
       }
 
       const currentStock = readStock();
@@ -811,7 +812,6 @@ const server = http.createServer(async (req, res) => {
       }
       const updatedStock = saveStock(currentStock);
 
-      const authMember = getAuthenticatedMember(req);
       const clubName = String(body.clubName || process.env.CLUB_NAME || 'DORAGON DOJO CLUB').trim();
       const order = {
         ref: String(body.ref || `CLUB-${Math.floor(1000 + Math.random() * 9000)}`),
@@ -829,13 +829,13 @@ const server = http.createServer(async (req, res) => {
 
       saveOrder(order);
 
-      if (!isSmtpConfigured()) {
+      if (!memberEmail || !isSmtpConfigured()) {
         return sendJson(res, 200, {
           ok: true,
           order,
           stock: updatedStock,
           emailSent: false,
-          emailStatus: 'not_configured'
+          emailStatus: 'none'
         });
       }
 

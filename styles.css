@@ -2680,3 +2680,88 @@ select option {
   }
 }
 
+/* ==========================================================================
+   PARCOURS COMMANDE & PAIEMENT PROPRE (PANIER -> CONFIRMATION)
+   ========================================================================== */
+
+.checkout-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.checkout-section-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.checkout-step-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--club-gold);
+  background: rgba(229, 178, 76, 0.12);
+  border: 1px solid rgba(229, 178, 76, 0.3);
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+}
+
+.field-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 0.25rem;
+  line-height: 1.35;
+}
+
+.btn-lg {
+  padding: 0.95rem 1.35rem;
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.btn-price-badge {
+  background: rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.checkout-reassurance {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 0.65rem;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.checkout-reassurance svg {
+  flex-shrink: 0;
+  color: var(--club-gold);
+}
+
+.confirm-notice {
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0.5rem 0 1.25rem;
+  line-height: 1.45;
+}
+
+

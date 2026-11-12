@@ -56,10 +56,8 @@
     submitOrderBtn: document.getElementById('submit-order-btn'),
     orderConfirmation: document.getElementById('order-confirmation'),
     confirmOrderRef: document.getElementById('confirm-order-ref'),
-    emailStatusBanner: document.getElementById('email-status-banner'),
     confirmSummaryCard: document.getElementById('confirm-summary-card'),
     sendWhatsappBtn: document.getElementById('send-whatsapp-btn'),
-    sendEmailBtn: document.getElementById('send-email-btn'),
     copyOrderBtn: document.getElementById('copy-order-btn'),
     printOrderBtn: document.getElementById('print-order-btn'),
     newOrderBtn: document.getElementById('new-order-btn'),
@@ -505,6 +503,8 @@
     els.emptyCartState.hidden = true;
     els.cartFilledState.hidden = false;
     els.cartTotal.textContent = formatEuro(totalPrice);
+    const priceBadge = document.getElementById('submit-order-price-badge');
+    if (priceBadge) priceBadge.textContent = formatEuro(totalPrice);
 
     els.cartItemsList.innerHTML = lines.map(({ product, size, qty, lineTotal }) => `
       <li class="cart-item">
@@ -668,26 +668,27 @@
 
   function buildOrderPlainText(order) {
     const itemsText = order.items
-      .map((i) => `- ${i.qty}x ${i.name} (${i.size}) : ${formatEuro(i.lineTotal)}`)
+      .map((i) => `- ${i.qty}x ${i.name} (Taille ${i.size}) : ${formatEuro(i.lineTotal)}`)
       .join('\n');
 
     return [
-      `REÇU DE COMMANDE — ${state.settings.clubName}`,
-      'Merci d\'avoir passé commande !',
+      `🥋 REÇU DE COMMANDE — ${state.settings.clubName}`,
+      'Votre équipement est réservé au dojo !',
       '',
       `Référence : ${order.ref}`,
       `Date : ${order.dateLabel}`,
       `Adhérent : ${order.memberName}`,
-      `Email : ${order.memberEmail || order.memberContact || ''}`,
       order.memberPhone ? `Téléphone : ${order.memberPhone}` : null,
-      `Règlement : ${order.paymentMethod}`,
+      order.memberEmail ? `Email : ${order.memberEmail}` : null,
+      `Mode de règlement : ${order.paymentMethod}`,
       order.memberNote ? `Remarque : ${order.memberNote}` : null,
       '',
-      'Articles :',
+      'Articles commandés :',
       itemsText,
       '',
-      `TOTAL : ${formatEuro(order.total)} (Retrait gratuit au club)`
-    ].filter((line) => line !== null).join('\n');
+      `TOTAL : ${formatEuro(order.total)}`,
+      '(À régler et retirer directement à l\'accueil du club)'
+    ].filter(Boolean).join('\n');
   }
 
   async function handleCheckoutSubmit(event) {
@@ -697,13 +698,17 @@
 
     const formData = new FormData(els.checkoutForm);
     const memberName = String(formData.get('memberName') || '').trim();
-    const memberEmail = String(formData.get('memberEmail') || '').trim();
     const memberPhone = String(formData.get('memberPhone') || '').trim();
-    const paymentMethod = String(formData.get('paymentMethod') || '').trim();
+    const memberEmail = state.member ? (state.member.email || '') : '';
+    const paymentMethod = String(formData.get('paymentMethod') || 'Sur place au dojo (Espèces ou CB)').trim();
     const memberNote = String(formData.get('memberNote') || '').trim();
 
-    if (!memberName || !memberEmail) {
-      showToast('Veuillez renseigner votre nom et votre email.');
+    if (!memberName) {
+      showToast('Veuillez renseigner votre nom et prénom.');
+      return;
+    }
+    if (!memberPhone) {
+      showToast('Veuillez renseigner votre numéro de téléphone.');
       return;
     }
 
@@ -729,9 +734,8 @@
     };
 
     els.submitOrderBtn.disabled = true;
-    els.submitOrderBtn.textContent = 'Envoi en cours...';
+    els.submitOrderBtn.textContent = 'Validation...';
 
-    let emailResult = { status: 'offline' };
     let serverSyncedStock = false;
 
     if (window.location.protocol.startsWith('http')) {
@@ -742,7 +746,6 @@
           body: JSON.stringify({
             ...order,
             clubName: state.settings.clubName,
-            clubEmail: state.settings.email,
             memberId: state.member ? state.member.id : null
           })
         });
@@ -754,7 +757,7 @@
             renderProducts();
           }
           els.submitOrderBtn.disabled = false;
-          els.submitOrderBtn.textContent = 'Confirmer la commande';
+          els.submitOrderBtn.innerHTML = `<span>Confirmer la commande</span> <span class="btn-price-badge" id="submit-order-price-badge">${formatEuro(totalPrice)}</span>`;
           showToast(data.error || 'Stock insuffisant.');
           return;
         }
@@ -764,13 +767,9 @@
             saveJson(STORAGE_KEYS.STOCK, state.stock);
             serverSyncedStock = true;
           }
-          emailResult = {
-            status: data.emailStatus || (data.emailSent ? 'sent' : 'not_configured'),
-            error: data.emailError
-          };
         }
       } catch {
-        emailResult = { status: 'offline' };
+        // Fallback offline
       }
     }
 
@@ -784,12 +783,12 @@
     }
 
     els.submitOrderBtn.disabled = false;
-    els.submitOrderBtn.textContent = 'Confirmer la commande';
+    els.submitOrderBtn.innerHTML = `<span>Confirmer la commande</span> <span class="btn-price-badge" id="submit-order-price-badge">${formatEuro(totalPrice)}</span>`;
 
     state.orders.unshift(order);
-      if (state.member) { state.memberOrders.unshift(order); }
+    if (state.member) { state.memberOrders.unshift(order); }
     saveJson(STORAGE_KEYS.ORDERS, state.orders);
-    state.lastOrder = { ...order, emailResult };
+    state.lastOrder = order;
     state.cart = [];
     saveJson(STORAGE_KEYS.CART, []);
     els.checkoutForm.reset();
@@ -799,51 +798,18 @@
     renderCart();
   }
 
-  function renderEmailStatusBanner(order) {
-    const status = order.emailResult?.status || 'offline';
-    const banner = els.emailStatusBanner;
-    banner.className = 'email-status-banner';
-
-    if (status === 'sent') {
-      banner.classList.add('is-sent');
-      banner.textContent = `Reçu envoyé par mail à ${order.memberEmail}.`;
-      banner.hidden = false;
-      return;
-    }
-
-    if (status === 'not_configured') {
-      banner.classList.add('is-warn');
-      banner.textContent = 'Commande enregistrée. Pour activer l\'envoi automatique par mail, renseignez vos identifiants SMTP dans le fichier .env du serveur.';
-      banner.hidden = false;
-      return;
-    }
-
-    if (status === 'error') {
-      banner.classList.add('is-warn');
-      banner.textContent = `Commande enregistrée, mais l'envoi SMTP a échoué (${order.emailResult?.error || 'erreur serveur'}). Utilisez le bouton Email ci-dessous.`;
-      banner.hidden = false;
-      return;
-    }
-
-    banner.textContent = 'Serveur mail non démarré (mode local). Utilisez Envoyer par Email ou Imprimer ci-dessous.';
-    banner.hidden = false;
-  }
-
   function displayOrderConfirmation(order) {
     const text = buildOrderPlainText(order);
     els.confirmOrderRef.textContent = `Réf. ${order.ref}`;
     els.confirmSummaryCard.textContent = text;
-    renderEmailStatusBanner(order);
 
     const encodedText = encodeURIComponent(text);
     const cleanPhone = (state.settings.whatsapp || '').replace(/\D/g, '');
-    els.sendWhatsappBtn.href = cleanPhone
-      ? `https://wa.me/${cleanPhone}?text=${encodedText}`
-      : `https://wa.me/?text=${encodedText}`;
-
-    const recipient = order.memberEmail || state.settings.email || '';
-    const subject = encodeURIComponent(`Merci pour votre commande ${order.ref} — ${state.settings.clubName}`);
-    els.sendEmailBtn.href = `mailto:${encodeURIComponent(recipient)}?subject=${subject}&body=${encodedText}`;
+    if (els.sendWhatsappBtn) {
+      els.sendWhatsappBtn.href = cleanPhone
+        ? `https://wa.me/${cleanPhone}?text=${encodedText}`
+        : `https://wa.me/?text=${encodedText}`;
+    }
   }
 
   
@@ -879,10 +845,8 @@
 
       // Auto-fill checkout fields if empty
       const nameInput = document.getElementById('member-name');
-      const emailInput = document.getElementById('member-email');
       const phoneInput = document.getElementById('member-phone');
       if (nameInput && !nameInput.value) nameInput.value = state.member.name;
-      if (emailInput && !emailInput.value) emailInput.value = state.member.email;
       if (phoneInput && state.member.phone && !phoneInput.value) phoneInput.value = state.member.phone;
     } else {
       els.accountBtn.classList.remove('is-logged');
