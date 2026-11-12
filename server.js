@@ -813,6 +813,8 @@ const server = http.createServer(async (req, res) => {
       const updatedStock = saveStock(currentStock);
 
       const clubName = String(body.clubName || process.env.CLUB_NAME || 'DORAGON DOJO CLUB').trim();
+      const paymentMethod = String(body.paymentMethod || 'Paiement en ligne par Carte Bancaire').trim();
+      const isOnlinePaid = paymentMethod.toLowerCase().includes('en ligne');
       const order = {
         ref: String(body.ref || `CLUB-${Math.floor(1000 + Math.random() * 9000)}`),
         memberId: authMember ? authMember.id : (body.memberId || null),
@@ -821,7 +823,8 @@ const server = http.createServer(async (req, res) => {
         memberName,
         memberEmail,
         memberPhone: String(body.memberPhone || '').trim(),
-        paymentMethod: String(body.paymentMethod || 'Sur place au club (Espèces / CB)').trim(),
+        paymentMethod,
+        paymentStatus: isOnlinePaid ? 'Payé en ligne (CB)' : 'À régler au dojo (Réservation)',
         memberNote: String(body.memberNote || '').trim(),
         total: Number(body.total) || 0,
         items

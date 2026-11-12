@@ -671,9 +671,11 @@
       .map((i) => `- ${i.qty}x ${i.name} (Taille ${i.size}) : ${formatEuro(i.lineTotal)}`)
       .join('\n');
 
+    const isOnline = (order.paymentMethod || '').toLowerCase().includes('en ligne');
+
     return [
       `🥋 REÇU DE COMMANDE — ${state.settings.clubName}`,
-      'Votre équipement est réservé au dojo !',
+      isOnline ? 'Paiement en ligne validé avec succès !' : '⚠️ Réservation enregistrée — Paiement à effectuer au club',
       '',
       `Référence : ${order.ref}`,
       `Date : ${order.dateLabel}`,
@@ -681,13 +683,16 @@
       order.memberPhone ? `Téléphone : ${order.memberPhone}` : null,
       order.memberEmail ? `Email : ${order.memberEmail}` : null,
       `Mode de règlement : ${order.paymentMethod}`,
+      order.paymentStatus ? `Statut : ${order.paymentStatus}` : null,
       order.memberNote ? `Remarque : ${order.memberNote}` : null,
       '',
       'Articles commandés :',
       itemsText,
       '',
       `TOTAL : ${formatEuro(order.total)}`,
-      '(À régler et retirer directement à l\'accueil du club)'
+      isOnline
+        ? '(Payé par Carte Bancaire en ligne — Équipement à récupérer à l\'accueil du dojo)'
+        : '⚠️ ATTENTION : Vous réservez uniquement votre équipement en ligne. Le règlement de ' + formatEuro(order.total) + ' s\'effectuera directement au dojo lors de votre prochain entraînement (en Espèces ou par Carte Bancaire).'
     ].filter(Boolean).join('\n');
   }
 
@@ -700,8 +705,14 @@
     const memberName = String(formData.get('memberName') || '').trim();
     const memberPhone = String(formData.get('memberPhone') || '').trim();
     const memberEmail = state.member ? (state.member.email || '') : '';
-    const paymentMethod = String(formData.get('paymentMethod') || 'Sur place au dojo (Espèces ou CB)').trim();
     const memberNote = String(formData.get('memberNote') || '').trim();
+
+    const radioClub = document.querySelector('input[name="paymentOption"][value="club"]');
+    const isClub = radioClub && radioClub.checked;
+    const paymentMethod = isClub
+      ? 'Retrait au dojo (Réservation - Paiement sur place)'
+      : 'Paiement en ligne sécurisé par Carte Bancaire';
+    const paymentStatus = isClub ? 'À régler au club' : 'Payé en ligne (CB)';
 
     if (!memberName) {
       showToast('Veuillez renseigner votre nom et prénom.');
@@ -710,6 +721,28 @@
     if (!memberPhone) {
       showToast('Veuillez renseigner votre numéro de téléphone.');
       return;
+    }
+
+    if (!isClub) {
+      const cardNum = (document.getElementById('card-number')?.value || '').replace(/\s/g, '');
+      const cardExp = (document.getElementById('card-expiry')?.value || '').trim();
+      const cardCvc = (document.getElementById('card-cvc')?.value || '').trim();
+
+      if (cardNum.length < 15 || !/^\d+$/.test(cardNum)) {
+        showToast('Veuillez renseigner un numéro de carte bancaire valide (16 chiffres).');
+        document.getElementById('card-number')?.focus();
+        return;
+      }
+      if (!/^\d{2}\/\d{2}$/.test(cardExp)) {
+        showToast('Veuillez renseigner l\'expiration au format MM/AA.');
+        document.getElementById('card-expiry')?.focus();
+        return;
+      }
+      if (cardCvc.length < 3) {
+        showToast('Veuillez renseigner le code cryptogramme CVC (3 chiffres).');
+        document.getElementById('card-cvc')?.focus();
+        return;
+      }
     }
 
     const now = new Date();
@@ -722,6 +755,7 @@
       memberEmail,
       memberPhone,
       paymentMethod,
+      paymentStatus,
       memberNote,
       total: totalPrice,
       items: lines.map(({ product, size, qty, lineTotal }) => ({
@@ -734,7 +768,7 @@
     };
 
     els.submitOrderBtn.disabled = true;
-    els.submitOrderBtn.textContent = 'Validation...';
+    els.submitOrderBtn.textContent = isClub ? 'Enregistrement de la réservation...' : 'Paiement en cours...';
 
     let serverSyncedStock = false;
 
@@ -757,7 +791,7 @@
             renderProducts();
           }
           els.submitOrderBtn.disabled = false;
-          els.submitOrderBtn.innerHTML = `<span>Confirmer la commande</span> <span class="btn-price-badge" id="submit-order-price-badge">${formatEuro(totalPrice)}</span>`;
+          updateSubmitOrderBtnUi(totalPrice);
           showToast(data.error || 'Stock insuffisant.');
           return;
         }
@@ -783,7 +817,7 @@
     }
 
     els.submitOrderBtn.disabled = false;
-    els.submitOrderBtn.innerHTML = `<span>Confirmer la commande</span> <span class="btn-price-badge" id="submit-order-price-badge">${formatEuro(totalPrice)}</span>`;
+    updateSubmitOrderBtnUi(totalPrice);
 
     state.orders.unshift(order);
     if (state.member) { state.memberOrders.unshift(order); }
@@ -798,10 +832,29 @@
     renderCart();
   }
 
+  function updateSubmitOrderBtnUi(totalPrice) {
+    const radioClub = document.querySelector('input[name="paymentOption"][value="club"]');
+    const isClub = radioClub && radioClub.checked;
+    const labelSpan = document.getElementById('submit-order-btn-label');
+    const badgeSpan = document.getElementById('submit-order-price-badge');
+    if (labelSpan) labelSpan.textContent = isClub ? 'Réserver mon équipement' : 'Payer en ligne';
+    if (badgeSpan) badgeSpan.textContent = formatEuro(totalPrice);
+  }
+
   function displayOrderConfirmation(order) {
     const text = buildOrderPlainText(order);
     els.confirmOrderRef.textContent = `Réf. ${order.ref}`;
     els.confirmSummaryCard.textContent = text;
+
+    const isClub = (order.paymentMethod || '').toLowerCase().includes('retrait');
+    const noticeEl = document.querySelector('.confirm-notice');
+    if (noticeEl) {
+      if (isClub) {
+        noticeEl.innerHTML = `<strong>⚠️ Attention réservation :</strong> Vous avez réservé votre équipement en ligne. Aucun débit n'a été effectué. Le règlement intégral de <strong>${formatEuro(order.total)}</strong> s'effectuera directement à l'accueil du dojo (en Espèces ou par Carte Bancaire).`;
+      } else {
+        noticeEl.innerHTML = `<strong>Paiement CB validé en ligne !</strong> Votre règlement de <strong>${formatEuro(order.total)}</strong> a été accepté. Vos équipements sont préparés et vous attendent au dojo.`;
+      }
+    }
 
     const encodedText = encodeURIComponent(text);
     const cleanPhone = (state.settings.whatsapp || '').replace(/\D/g, '');
@@ -1232,6 +1285,65 @@
     });
 
     els.checkoutForm.addEventListener('submit', handleCheckoutSubmit);
+
+    // Bascule entre Paiement en ligne et Retrait au club
+    const radioOnline = document.querySelector('input[name="paymentOption"][value="online"]');
+    const radioClub = document.querySelector('input[name="paymentOption"][value="club"]');
+    const labelOnline = document.getElementById('opt-label-online');
+    const labelClub = document.getElementById('opt-label-club');
+    const panelOnline = document.getElementById('online-card-panel');
+    const panelClub = document.getElementById('club-reservation-panel');
+    const btnLabel = document.getElementById('submit-order-btn-label');
+    const reassuranceText = document.getElementById('reassurance-text');
+
+    function updatePaymentOptionView(option) {
+      if (option === 'online') {
+        if (labelOnline) labelOnline.classList.add('is-active');
+        if (labelClub) labelClub.classList.remove('is-active');
+        if (panelOnline) panelOnline.hidden = false;
+        if (panelClub) panelClub.hidden = true;
+        if (btnLabel) btnLabel.textContent = 'Payer en ligne';
+        if (reassuranceText) reassuranceText.textContent = 'Paiement par carte bancaire sécurisé. Vos équipements sont préparés au dojo.';
+      } else {
+        if (labelClub) labelClub.classList.add('is-active');
+        if (labelOnline) labelOnline.classList.remove('is-active');
+        if (panelOnline) panelOnline.hidden = true;
+        if (panelClub) panelClub.hidden = false;
+        if (btnLabel) btnLabel.textContent = 'Réserver mon équipement';
+        if (reassuranceText) reassuranceText.textContent = '⚠️ Attention : Vous réservez uniquement votre équipement. Le paiement intégral se fera sur place au club.';
+      }
+    }
+
+    if (radioOnline && radioClub) {
+      radioOnline.addEventListener('change', () => updatePaymentOptionView('online'));
+      radioClub.addEventListener('change', () => updatePaymentOptionView('club'));
+    }
+
+    // Formatage automatique carte bancaire
+    const cardNumInput = document.getElementById('card-number');
+    if (cardNumInput) {
+      cardNumInput.addEventListener('input', (e) => {
+        let val = e.target.value.replace(/\D/g, '').slice(0, 16);
+        val = val.replace(/(\d{4})(?=\d)/g, '$1 ');
+        e.target.value = val;
+      });
+    }
+
+    const cardExpInput = document.getElementById('card-expiry');
+    if (cardExpInput) {
+      cardExpInput.addEventListener('input', (e) => {
+        let val = e.target.value.replace(/\D/g, '').slice(0, 4);
+        if (val.length >= 2) val = val.slice(0, 2) + '/' + val.slice(2);
+        e.target.value = val;
+      });
+    }
+
+    const cardCvcInput = document.getElementById('card-cvc');
+    if (cardCvcInput) {
+      cardCvcInput.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/\D/g, '').slice(0, 3);
+      });
+    }
 
     els.copyOrderBtn.addEventListener('click', async () => {
       if (!state.lastOrder) return;

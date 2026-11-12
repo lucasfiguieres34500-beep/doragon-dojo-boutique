@@ -172,11 +172,79 @@
           </div>
 
           <div class="form-field">
-            <label for="payment-method">Mode de règlement</label>
-            <select id="payment-method" name="paymentMethod">
-              <option value="Sur place au dojo (Espèces / CB)" selected>Sur place au dojo (Espèces ou CB)</option>
-              <option value="Virement bancaire instantané">Virement bancaire instantané</option>
-            </select>
+            <label class="form-label-legend">Mode de paiement *</label>
+            <div class="payment-options-grid">
+              <label class="payment-option-card is-active" id="opt-label-online">
+                <input type="radio" name="paymentOption" value="online" checked class="payment-radio" />
+                <div class="payment-option-content">
+                  <div class="payment-option-head">
+                    <span class="payment-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                    </span>
+                    <strong class="payment-title">Paiement en ligne</strong>
+                    <span class="payment-pill pill-gold">CB Immédiat</span>
+                  </div>
+                  <p class="payment-desc">Carte Bleue, Visa, Mastercard sécurisé.</p>
+                </div>
+              </label>
+
+              <label class="payment-option-card" id="opt-label-club">
+                <input type="radio" name="paymentOption" value="club" class="payment-radio" />
+                <div class="payment-option-content">
+                  <div class="payment-option-head">
+                    <span class="payment-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    </span>
+                    <strong class="payment-title">Retrait au club</strong>
+                    <span class="payment-pill pill-amber">Réservation</span>
+                  </div>
+                  <p class="payment-desc">Règlement au dojo lors du retrait (Espèces / CB).</p>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Panneau 1 : Carte Bancaire en ligne -->
+          <div class="payment-subpanel" id="online-card-panel">
+            <div class="card-inputs-grid">
+              <div class="form-field full-col">
+                <label for="card-number">Numéro de carte bancaire *</label>
+                <div class="card-input-wrap">
+                  <input type="text" id="card-number" placeholder="4970 •••• •••• ••••" maxlength="19" inputmode="numeric" />
+                  <div class="card-chips">
+                    <span class="card-chip">CB</span>
+                    <span class="card-chip">VISA</span>
+                    <span class="card-chip">MC</span>
+                  </div>
+                </div>
+              </div>
+              <div class="form-field">
+                <label for="card-expiry">Expiration *</label>
+                <input type="text" id="card-expiry" placeholder="MM/AA" maxlength="5" inputmode="numeric" />
+              </div>
+              <div class="form-field">
+                <label for="card-cvc">CVC *</label>
+                <input type="password" id="card-cvc" placeholder="123" maxlength="3" inputmode="numeric" />
+              </div>
+            </div>
+            <div class="payment-secure-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span>Transaction 100% sécurisée SSL 256 bits · Débit immédiat</span>
+            </div>
+          </div>
+
+          <!-- Panneau 2 : Avertissement Retrait au Club -->
+          <div class="payment-subpanel" id="club-reservation-panel" hidden>
+            <div class="reservation-warning-box">
+              <div class="reservation-warning-head">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <strong>ATTENTION : Réservation sans paiement en ligne</strong>
+              </div>
+              <p>Vous réservez uniquement votre équipement en ligne pour bloquer la taille et le stock.</p>
+              <div class="reservation-reminder-highlight">
+                ⚠️ Le règlement s'effectuera intégralement sur place au club (en Espèces ou par Carte Bancaire) le jour où vous venez récupérer votre tenue.
+              </div>
+            </div>
           </div>
 
           <div class="form-field">
@@ -185,12 +253,12 @@
           </div>
 
           <button type="submit" class="btn btn-primary btn-full btn-lg" id="submit-order-btn">
-            <span>Confirmer la commande</span>
+            <span id="submit-order-btn-label">Payer en ligne</span>
             <span class="btn-price-badge" id="submit-order-price-badge">0,00 €</span>
           </button>
-          <div class="checkout-reassurance">
+          <div class="checkout-reassurance" id="checkout-reassurance">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            <span>Retrait et règlement directement au club. Aucun paiement en ligne requis.</span>
+            <span id="reassurance-text">Paiement par carte bancaire sécurisé. Vos équipements sont préparés au dojo.</span>
           </div>
         </form>
       </div>
