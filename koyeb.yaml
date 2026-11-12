@@ -1,0 +1,23 @@
+name: doragon-dojo-boutique
+services:
+  - name: boutique
+    type: web
+    regions:
+      - par
+    routes:
+      - path: /
+        port: 8000
+    instance_type: nano
+    scaling:
+      min: 1
+      max: 1
+    ports:
+      - port: 8000
+        protocol: http
+    env:
+      - key: PORT
+        value: "8000"
+      - key: HOST
+        value: "0.0.0.0"
+      - key: NODE_ENV
+        value: "production"

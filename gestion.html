@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DORAGON DOJO CLUB — Gestion du stock</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand">
+        <img src="assets/logo.jpg" alt="Logo DORAGON DOJO CLUB" class="brand-logo" />
+        <div class="brand-text">
+          <span class="brand-name" id="gestion-club-name">DORAGON DOJO CLUB</span>
+          <span class="brand-tag">Gestion du stock</span>
+        </div>
+      </a>
+
+      <div class="gestion-header-actions">
+        <button type="button" class="btn btn-ghost btn-sm" id="lock-gestion-btn" hidden>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          <span>Verrouiller</span>
+        </button>
+        <a href="index.html" class="btn btn-secondary btn-sm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m12 19-7-7 7-7" />
+            <path d="M19 12H5" />
+          </svg>
+          <span>Voir la boutique</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Écran mot de passe -->
+  <section class="auth-gate" id="gestion-auth-gate">
+    <div class="auth-card">
+      <div class="auth-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+      </div>
+      <h1>Accès Gestion du Stock</h1>
+      <p>Entrez le mot de passe du club pour gérer les stocks et voir les commandes.</p>
+
+      <form id="auth-form" class="auth-form">
+        <div class="form-field">
+          <label for="auth-password">Mot de passe</label>
+          <div class="password-input-wrap">
+            <input type="password" id="auth-password" name="password" required autocomplete="current-password" placeholder="Mot de passe" />
+            <button type="button" class="password-toggle-btn" id="toggle-password-btn" aria-label="Afficher le mot de passe">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="auth-error" id="auth-error" hidden>Mot de passe incorrect.</div>
+        <button type="submit" class="btn btn-primary btn-full" id="auth-submit-btn">Déverrouiller</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Tableau de gestion (caché tant que non authentifié) -->
+  <main class="gestion-main" id="gestion-main" hidden>
+    <div class="container">
+      <!-- Résumé rapide -->
+      <section class="gestion-stats" aria-label="Résumé du stock">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+              <path d="m3.3 7 8.7 5 8.7-5" />
+              <path d="M12 22V12" />
+            </svg>
+          </div>
+          <div>
+            <span class="stat-label">Articles en stock</span>
+            <strong class="stat-value" id="stat-total-stock">0</strong>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-warn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v4" />
+              <path d="M12 16h.01" />
+            </svg>
+          </div>
+          <div>
+            <span class="stat-label">Tailles en rupture</span>
+            <strong class="stat-value" id="stat-out-of-stock">0</strong>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+              <path d="M3 6h18" />
+              <path d="M16 10a4 4 0 0 1-8 0" />
+            </svg>
+          </div>
+          <div>
+            <span class="stat-label">Commandes reçues</span>
+            <strong class="stat-value" id="stat-orders-count">0</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- Outil pour ajouter un article -->
+      <section class="gestion-section">
+        <div class="gestion-section-head">
+          <div>
+            <h2>Ajouter un article à la boutique</h2>
+            <p class="gestion-hint">Ajoutez un nouveau produit : il apparaît immédiatement dans la boutique et dans le stock.</p>
+          </div>
+        </div>
+        <div class="gestion-panel">
+          <form id="add-product-form" class="add-product-form">
+            <div class="add-product-layout">
+              <div class="add-product-photo-col">
+                <div class="add-product-preview-box" id="new-prod-preview-box">
+                  <img src="assets/logo.jpg" alt="Aperçu article" id="new-prod-preview-img" />
+                </div>
+                <label class="btn btn-secondary btn-sm btn-full upload-photo-btn" for="new-prod-image">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" x2="12" y1="3" y2="15" />
+                  </svg>
+                  <span>Choisir une photo</span>
+                </label>
+                <input type="file" id="new-prod-image" accept="image/*" hidden />
+              </div>
+
+              <div class="add-product-fields">
+                <div class="admin-form-grid">
+                  <div class="form-field">
+                    <label for="new-prod-name">Nom de l'article *</label>
+                    <input type="text" id="new-prod-name" required placeholder="Ex : Rashguard Manche Longue" />
+                  </div>
+                  <div class="form-field">
+                    <label for="new-prod-category">Catégorie *</label>
+                    <select id="new-prod-category">
+                      <option value="rashguard">Rashguards</option>
+                      <option value="gants">Gants MMA</option>
+                    </select>
+                  </div>
+                  <div class="form-field">
+                    <label for="new-prod-price">Prix (€) *</label>
+                    <input type="number" id="new-prod-price" min="1" step="0.5" required placeholder="45" />
+                  </div>
+                  <div class="form-field">
+                    <label for="new-prod-stock">Stock initial par taille</label>
+                    <input type="number" id="new-prod-stock" min="0" step="1" value="5" />
+                  </div>
+                </div>
+
+                <div class="form-field">
+                  <label for="new-prod-sizes">Tailles (séparées par des virgules) *</label>
+                  <div class="size-presets-row" id="size-presets-row">
+                    <button type="button" class="size-preset-pill" data-preset="XS, S, M, L, XL, XXL">XS à XXL</button>
+                    <button type="button" class="size-preset-pill" data-preset="S/M, L/XL">S/M, L/XL</button>
+                    <button type="button" class="size-preset-pill" data-preset="Unique">Taille unique</button>
+                  </div>
+                  <input type="text" id="new-prod-sizes" required value="XS, S, M, L, XL, XXL" placeholder="XS, S, M, L, XL, XXL" />
+                </div>
+
+                <div class="form-field">
+                  <label for="new-prod-desc">Description courte (optionnel)</label>
+                  <input type="text" id="new-prod-desc" placeholder="Ex : Compression technique aux couleurs du club." />
+                </div>
+
+                <div class="admin-form-actions">
+                  <button type="submit" class="btn btn-primary" id="add-prod-submit-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M5 12h14" />
+                      <path d="M12 5v14" />
+                    </svg>
+                    <span>Ajouter à la boutique</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Gestion simple du stock -->
+      <section class="gestion-section">
+        <div class="gestion-section-head">
+          <div>
+            <h2>Stock par taille</h2>
+            <p class="gestion-hint">Cliquez sur + ou - pour ajuster. Chaque commande client retire automatiquement l'article du stock.</p>
+          </div>
+          <span class="stock-sync-badge" id="stock-sync-badge">Synchronisé</span>
+        </div>
+
+        <div class="stock-cards-grid" id="stock-cards-grid"></div>
+      </section>
+
+      <!-- Historique des commandes -->
+      <section class="gestion-section">
+        <div class="gestion-section-head">
+          <h2>Commandes des adhérents</h2>
+          <div class="admin-orders-btns">
+            <button type="button" class="btn btn-secondary btn-sm" id="gestion-export-csv">Exporter CSV</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="gestion-clear-orders">Vider</button>
+          </div>
+        </div>
+        <div class="gestion-panel">
+          <div id="gestion-orders-list" class="admin-orders-list"></div>
+        </div>
+      </section>
+
+      <!-- Paramètres club -->
+      <section class="gestion-section">
+        <div class="gestion-section-head">
+          <h2>Coordonnées du club</h2>
+        </div>
+        <div class="gestion-panel">
+          <form id="gestion-settings-form" class="admin-form">
+            <div class="admin-form-grid">
+              <div class="form-field">
+                <label for="g-club-name">Nom du club</label>
+                <input type="text" id="g-club-name" required />
+              </div>
+              <div class="form-field">
+                <label for="g-whatsapp">WhatsApp (ex : 33612345678)</label>
+                <input type="text" id="g-whatsapp" placeholder="33612345678" />
+              </div>
+              <div class="form-field">
+                <label for="g-email">Email du club</label>
+                <input type="email" id="g-email" placeholder="boutique@monclub.fr" />
+              </div>
+              <div class="form-field">
+                <label for="g-footer-note">Note pied de page</label>
+                <input type="text" id="g-footer-note" />
+              </div>
+            </div>
+            <div class="admin-form-actions">
+              <button type="submit" class="btn btn-primary">Enregistrer</button>
+              <span class="save-feedback" id="g-save-feedback" hidden>Enregistré</span>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Changer mot de passe -->
+      <section class="gestion-section">
+        <div class="gestion-section-head">
+          <h2>Mot de passe d'accès</h2>
+        </div>
+        <div class="gestion-panel">
+          <form id="gestion-password-form" class="admin-form">
+            <div class="admin-form-grid">
+              <div class="form-field">
+                <label for="pwd-current">Mot de passe actuel</label>
+                <input type="password" id="pwd-current" required autocomplete="current-password" />
+              </div>
+              <div class="form-field">
+                <label for="pwd-next">Nouveau mot de passe (4 car. min)</label>
+                <input type="password" id="pwd-next" required minlength="4" autocomplete="new-password" />
+              </div>
+            </div>
+            <div class="admin-form-actions">
+              <button type="submit" class="btn btn-primary">Mettre à jour le mot de passe</button>
+              <span class="save-feedback" id="pwd-feedback" hidden>Mot de passe modifié</span>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-hidden="true"></div>
+
+  <script src="catalog.js"></script>
+  <script src="gestion.js"></script>
+</body>
+</html>
