@@ -978,21 +978,149 @@
     }
 
     els.memberOrdersContainer.innerHTML = state.memberOrders.map((order) => {
-      const itemsSummary = (order.items || []).map((it) => `${it.qty}x ${escapeHtml(it.name)} (Taille ${escapeHtml(it.size)})`).join(', ');
+      const itemsSummary = (order.items || []).map((it) => `${it.qty}× ${escapeHtml(it.name)} (${escapeHtml(it.size)})`).join(' · ');
+      const isOnline = (order.paymentMethod || '').toLowerCase().includes('en ligne');
+      const statusLabel = isOnline ? 'Payé CB (En ligne)' : 'À régler au club';
+      const statusClass = isOnline ? 'is-paid' : 'is-reserved';
+
       return `
         <div class="member-order-card">
           <div class="member-order-header">
-            <span class="member-order-ref">${escapeHtml(order.ref)}</span>
-            <span class="member-order-date">${escapeHtml(order.dateLabel || order.createdAt ? new Date(order.createdAt).toLocaleDateString('fr-FR') : '')}</span>
+            <div>
+              <span class="member-order-ref">${escapeHtml(order.ref)}</span>
+              <span class="member-order-status-pill ${statusClass}">${statusLabel}</span>
+            </div>
+            <span class="member-order-date">${escapeHtml(order.dateLabel || (order.createdAt ? new Date(order.createdAt).toLocaleDateString('fr-FR') : ''))}</span>
           </div>
           <div class="member-order-items">${itemsSummary}</div>
           <div class="member-order-footer">
-            <span>Règlement : <strong>${escapeHtml(order.paymentMethod || 'Sur place au club')}</strong></span>
             <span class="member-order-total">${formatEuro(order.total || 0)}</span>
+            <button type="button" class="btn btn-secondary btn-sm btn-receipt-pdf" data-order-ref="${escapeHtml(order.ref)}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <span>Reçu PDF</span>
+            </button>
           </div>
         </div>
       `;
     }).join('');
+  }
+
+  function generateReceiptPdf(order) {
+    if (!order) return;
+    const isOnline = (order.paymentMethod || '').toLowerCase().includes('en ligne');
+    const clubName = state.settings.clubName || 'DORAGON DOJO CLUB';
+    const dateFormatted = order.dateLabel || new Date(order.createdAt || Date.now()).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+
+    const rowsHtml = (order.items || []).map((i) => `
+      <tr>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-weight:600;color:#111827;">${escapeHtml(i.name)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;font-weight:700;color:#071326;">${escapeHtml(i.size)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;color:#374151;">${i.qty}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;color:#374151;">${formatEuro(i.lineTotal / (i.qty || 1))}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:#111827;">${formatEuro(i.lineTotal)}</td>
+      </tr>
+    `).join('');
+
+    const statusBadgeHtml = isOnline
+      ? `<div style="display:inline-block;padding:6px 14px;background:#dcfce7;color:#15803d;border:1.5px solid #86efac;border-radius:999px;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">✓ Payé en ligne par Carte Bancaire</div>`
+      : `<div style="display:inline-block;padding:6px 14px;background:#fef3c7;color:#b45309;border:1.5px solid #fcd34d;border-radius:999px;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">⚠️ Réservation — À régler au dojo</div>`;
+
+    const instructionsHtml = isOnline
+      ? `<p style="margin:0;font-size:12px;color:#374151;line-height:1.5;">Votre règlement a été effectué en ligne avec succès. Vous pouvez retirer votre équipement dès votre prochain cours à l'accueil du dojo sur présentation de ce reçu.</p>`
+      : `<p style="margin:0;font-size:12px;color:#b45309;line-height:1.5;"><strong>Rappel réservation :</strong> Vos articles sont réservés et bloqués au club. Veuillez prévoir votre règlement de <strong>${formatEuro(order.total)}</strong> (en Espèces ou par Carte Bancaire) lors de votre prochain entraînement pour récupérer vos équipements.</p>`;
+
+    const receiptHtml = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Reçu Officiel - ${escapeHtml(order.ref)} - ${escapeHtml(clubName)}</title>
+  <style>
+    @page { size: A4 portrait; margin: 12mm 15mm; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #111827; background: #ffffff; margin: 0; padding: 24px; font-size: 13px; line-height: 1.45; }
+    .receipt-container { max-width: 680px; margin: 0 auto; border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 30px; box-shadow: 0 4px 18px rgba(0,0,0,0.06); }
+    @media print {
+      body { padding: 0; }
+      .receipt-container { border: none; box-shadow: none; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="receipt-container">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #071326;padding-bottom:20px;margin-bottom:22px;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <img src="${window.location.origin}/assets/logo.jpg" alt="Logo" style="width:58px;height:58px;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb;" onerror="this.style.display='none'">
+        <div>
+          <h1 style="font-size:22px;font-weight:900;color:#071326;margin:0 0 3px;letter-spacing:-0.02em;">${escapeHtml(clubName)}</h1>
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:#d97706;">Boutique Officielle des Adhérents · Reçu & Bon de Retrait</div>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;letter-spacing:0.06em;">Numéro de commande</div>
+        <div style="font-size:20px;font-weight:900;color:#071326;font-family:monospace;margin-top:2px;">${escapeHtml(order.ref)}</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:4px;">Date : ${escapeHtml(dateFormatted)}</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px 18px;margin-bottom:24px;">
+      <div>
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:6px;">Bénéficiaire / Adhérent</div>
+        <div style="font-size:15px;font-weight:800;color:#111827;">${escapeHtml(order.memberName)}</div>
+        ${order.memberPhone ? `<div style="font-size:12px;color:#4b5563;margin-top:3px;">Tél : <strong>${escapeHtml(order.memberPhone)}</strong></div>` : ''}
+        ${order.memberEmail ? `<div style="font-size:12px;color:#4b5563;">Email : ${escapeHtml(order.memberEmail)}</div>` : ''}
+        ${order.memberNote ? `<div style="font-size:12px;color:#6b7280;margin-top:4px;"><em>Remarque : ${escapeHtml(order.memberNote)}</em></div>` : ''}
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:6px;">Statut du règlement</div>
+        ${statusBadgeHtml}
+        <div style="font-size:11px;color:#6b7280;margin-top:8px;">Lieu de remise : <strong>Accueil du Dojo</strong></div>
+      </div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      <thead>
+        <tr style="background:#071326;color:#ffffff;">
+          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;border-radius:6px 0 0 0;">Description</th>
+          <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;">Taille</th>
+          <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;">Qté</th>
+          <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;">Prix unitaire</th>
+          <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;border-radius:0 6px 0 0;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+      </tbody>
+    </table>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;background:#071326;color:#ffffff;border-radius:8px;padding:14px 20px;margin-bottom:24px;">
+      <div style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#e5e7eb;">Total de la commande</div>
+      <div style="font-size:24px;font-weight:900;color:#fbbf24;letter-spacing:-0.02em;">${formatEuro(order.total)}</div>
+    </div>
+
+    <div style="border:1px dashed #d1d5db;border-radius:8px;padding:14px 16px;background:#fafafa;margin-bottom:18px;">
+      <div style="font-size:12px;font-weight:800;color:#111827;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">Instructions officielles de retrait</div>
+      ${instructionsHtml}
+    </div>
+
+    <div style="text-align:center;color:#9ca3af;font-size:10px;border-top:1px solid #f3f4f6;padding-top:14px;">
+      ${escapeHtml(clubName)} · Document certifié officiel · Réf. commande : ${escapeHtml(order.ref)}
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const printWin = window.open('', '_blank');
+    if (!printWin) {
+      showToast('Veuillez autoriser les pop-ups pour télécharger votre reçu PDF.');
+      return;
+    }
+    printWin.document.open();
+    printWin.document.write(receiptHtml);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => {
+      printWin.print();
+    }, 350);
   }
 
   function openAccountModal(targetTab) {
@@ -1356,7 +1484,27 @@
       }
     });
 
-    els.printOrderBtn.addEventListener('click', () => window.print());
+    els.printOrderBtn.addEventListener('click', () => {
+      if (state.lastOrder) {
+        generateReceiptPdf(state.lastOrder);
+      } else {
+        window.print();
+      }
+    });
+
+    if (els.memberOrdersContainer) {
+      els.memberOrdersContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-receipt-pdf');
+        if (!btn) return;
+        const ref = btn.dataset.orderRef;
+        const found = (state.memberOrders || []).find((o) => o.ref === ref) || (state.orders || []).find((o) => o.ref === ref);
+        if (found) {
+          generateReceiptPdf(found);
+        } else {
+          showToast('Commande introuvable.');
+        }
+      });
+    }
 
     els.newOrderBtn.addEventListener('click', () => {
       state.lastOrder = null;

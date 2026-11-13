@@ -2647,8 +2647,55 @@ select option {
   align-items: center;
   justify-content: space-between;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 0.6rem;
+  padding-top: 0.75rem;
   font-size: 0.85rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.member-order-status-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: 0.5rem;
+}
+
+.member-order-status-pill.is-paid {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.member-order-status-pill.is-reserved {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fde68a;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.btn-receipt-pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(229, 178, 76, 0.14);
+  color: var(--club-gold);
+  border: 1px solid rgba(229, 178, 76, 0.35);
+  border-radius: 8px;
+  padding: 0.38rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-receipt-pdf:hover {
+  background: var(--club-gold);
+  color: #071326;
+  border-color: var(--club-gold);
+  transform: translateY(-1px);
 }
 
 .member-order-total {
