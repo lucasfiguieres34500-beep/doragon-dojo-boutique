@@ -31,7 +31,8 @@
     orders: loadJson(STORAGE_KEYS.ORDERS, []),
     lastOrder: null,
     member: null,
-    memberOrders: []
+    memberOrders: [],
+    authOrigin: 'header'
   };
 
   const els = {
@@ -570,6 +571,7 @@
     els.cartDrawer.classList.add('is-open');
     els.cartBackdrop.setAttribute('aria-hidden', 'false');
     els.cartDrawer.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('drawer-open');
     document.body.style.overflow = 'hidden';
   }
 
@@ -578,7 +580,10 @@
     els.cartDrawer.classList.remove('is-open');
     els.cartBackdrop.setAttribute('aria-hidden', 'true');
     els.cartDrawer.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
+    document.body.classList.remove('drawer-open');
+    if (!els.accountModalBackdrop.classList.contains('is-open')) {
+      document.body.style.overflow = '';
+    }
   }
 
   function openProductModal(productId) {
@@ -1285,8 +1290,9 @@
     }, 350);
   }
 
-  function openAccountModal(targetTab) {
+  function openAccountModal(targetTab, origin = 'header') {
     if (!els.accountModalBackdrop) return;
+    state.authOrigin = origin;
     if (state.member) {
       els.accountGuestView.hidden = true;
       els.accountLoggedView.hidden = false;
@@ -1299,12 +1305,18 @@
     }
     els.accountModalBackdrop.classList.add('is-open');
     els.accountModalBackdrop.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    document.body.style.overflow = 'hidden';
   }
 
   function closeAccountModal() {
     if (!els.accountModalBackdrop) return;
     els.accountModalBackdrop.classList.remove('is-open');
     els.accountModalBackdrop.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    if (!els.cartDrawer.classList.contains('is-open')) {
+      document.body.style.overflow = '';
+    }
     if (els.loginErrorMsg) els.loginErrorMsg.hidden = true;
     if (els.registerErrorMsg) els.registerErrorMsg.hidden = true;
     if (els.profileSuccessMsg) els.profileSuccessMsg.hidden = true;
@@ -1398,11 +1410,16 @@
       updateMemberUi();
       applyMemberPreferences();
       showToast(`Bienvenue ${state.member.name} !`);
-      closeAccountModal();
-      if (state.cart && state.cart.length > 0) {
-        state.cartStep = 'checkout';
-        renderCart();
-        openCartDrawer();
+
+      if (state.authOrigin === 'checkout') {
+        closeAccountModal();
+        if (state.cart && state.cart.length > 0) {
+          state.cartStep = 'checkout';
+          renderCart();
+          openCartDrawer();
+        }
+      } else {
+        openAccountModal('orders', 'header');
       }
     } catch {
       btn.disabled = false;
@@ -1455,11 +1472,16 @@
       updateMemberUi();
       applyMemberPreferences();
       showToast('Votre compte adhérent a été créé avec succès !');
-      closeAccountModal();
-      if (state.cart && state.cart.length > 0) {
-        state.cartStep = 'checkout';
-        renderCart();
-        openCartDrawer();
+
+      if (state.authOrigin === 'checkout') {
+        closeAccountModal();
+        if (state.cart && state.cart.length > 0) {
+          state.cartStep = 'checkout';
+          renderCart();
+          openCartDrawer();
+        }
+      } else {
+        openAccountModal('orders', 'header');
       }
     } catch {
       btn.disabled = false;
@@ -1587,7 +1609,7 @@
     if (els.btnGotoCheckout) {
       els.btnGotoCheckout.addEventListener('click', () => {
         if (!state.member) {
-          openAccountModal('register');
+          openAccountModal('register', 'checkout');
           showToast('Compte adhérent requis pour commander.');
           return;
         }
@@ -1599,7 +1621,7 @@
     if (els.btnGotoAccountReceipts) {
       els.btnGotoAccountReceipts.addEventListener('click', () => {
         closeCartDrawer();
-        openAccountModal('orders');
+        openAccountModal('orders', 'header');
       });
     }
 
@@ -1611,13 +1633,13 @@
     }
 
     if (els.btnSwitchAccountCheckout) {
-      els.btnSwitchAccountCheckout.addEventListener('click', () => openAccountModal('profile'));
+      els.btnSwitchAccountCheckout.addEventListener('click', () => openAccountModal('profile', 'checkout'));
     }
     if (els.btnCheckoutLogin) {
-      els.btnCheckoutLogin.addEventListener('click', () => openAccountModal('login'));
+      els.btnCheckoutLogin.addEventListener('click', () => openAccountModal('login', 'checkout'));
     }
     if (els.btnCheckoutRegister) {
-      els.btnCheckoutRegister.addEventListener('click', () => openAccountModal('register'));
+      els.btnCheckoutRegister.addEventListener('click', () => openAccountModal('register', 'checkout'));
     }
 
     els.checkoutForm.addEventListener('submit', handleCheckoutSubmit);
