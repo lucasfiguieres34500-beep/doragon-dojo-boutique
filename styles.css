@@ -886,15 +886,15 @@ body.is-landing .site-footer {
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(440px, 100vw);
+  width: min(480px, 100vw);
   height: 100dvh;
-  background: #091a38;
+  background: #071326;
   color: #ffffff;
-  border-left: 1px solid var(--border-subtle);
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
   z-index: 65;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(35, 95, 215, 0.15);
   transform: translateX(100%);
   visibility: hidden;
   pointer-events: none;
@@ -3022,5 +3022,215 @@ select option {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   CAISSE & PAIEMENT PRO E-COMMERCE (STEPPER & CONFIRMATION CARDS)
+   ========================================================================== */
+
+.cart-step-view {
+  animation: stepFadeIn 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes stepFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.checkout-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.15rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-back-link {
+  background: transparent;
+  border: none;
+  color: var(--club-gold);
+  font-size: 0.88rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  padding: 0.3rem 0;
+  transition: opacity 0.18s ease;
+}
+
+.btn-back-link:hover {
+  opacity: 0.75;
+}
+
+.checkout-total-pill {
+  background: rgba(229, 178, 76, 0.15);
+  color: var(--club-gold);
+  border: 1px solid rgba(229, 178, 76, 0.35);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.checkout-block {
+  background: #0c1e3d;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 1.15rem;
+  margin-bottom: 1rem;
+}
+
+.checkout-block-title {
+  margin: 0 0 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--club-gold);
+}
+
+/* Écran Confirmation Pro */
+.confirm-head-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.confirm-check-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+  animation: logoFloatIn 0.4s ease both;
+}
+
+.confirm-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 0.4rem;
+}
+
+.confirm-ref-tag {
+  display: inline-block;
+  font-family: monospace;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--club-gold);
+  background: rgba(229, 178, 76, 0.12);
+  border: 1px solid rgba(229, 178, 76, 0.3);
+  padding: 0.25rem 0.85rem;
+  border-radius: 999px;
+  letter-spacing: 0.05em;
+}
+
+.confirm-status-alert {
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  margin-bottom: 1rem;
+}
+
+.confirm-status-alert.is-paid {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
+}
+
+.confirm-status-alert.is-reserved {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fde68a;
+}
+
+.confirm-order-card {
+  background: #0c1e3d;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 1.15rem;
+  margin-bottom: 1.25rem;
+}
+
+.confirm-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.confirm-item-row:last-child {
+  border-bottom: none;
+}
+
+.confirm-item-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.confirm-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.confirm-item-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.15rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.confirm-item-meta {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.confirm-item-price {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--club-gold);
+}
+
+.confirm-total-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.12);
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.confirm-actions-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
 
 

@@ -26,6 +26,7 @@
     selectedSizes: Object.fromEntries((Array.isArray(initialProducts) ? initialProducts : DEFAULT_PRODUCTS).map((p) => [p.id, p.defaultSize || (p.sizes && p.sizes[0]) || 'M'])),
     stock: normalizeStock(loadJson(STORAGE_KEYS.STOCK, createDefaultStock(5, initialProducts)), initialProducts),
     cart: loadJson(STORAGE_KEYS.CART, []),
+    cartStep: 'items',
     settings: { ...DEFAULT_SETTINGS, ...loadJson(STORAGE_KEYS.SETTINGS, {}) },
     orders: loadJson(STORAGE_KEYS.ORDERS, []),
     lastOrder: null,
@@ -49,6 +50,14 @@
     drawerTitle: document.getElementById('drawer-title'),
     emptyCartState: document.getElementById('empty-cart-state'),
     cartFilledState: document.getElementById('cart-filled-state'),
+    cartStepItems: document.getElementById('cart-step-items'),
+    cartStepCheckout: document.getElementById('cart-step-checkout'),
+    btnGotoCheckout: document.getElementById('btn-goto-checkout'),
+    btnBackToItems: document.getElementById('btn-back-to-items'),
+    summaryItemsCount: document.getElementById('summary-items-count'),
+    summarySubtotal: document.getElementById('summary-subtotal'),
+    checkoutMiniTotal: document.getElementById('checkout-mini-total'),
+    reservationAmountText: document.getElementById('reservation-amount-text'),
     cartItemsList: document.getElementById('cart-items-list'),
     cartTotal: document.getElementById('cart-total'),
     browseFromEmptyBtn: document.getElementById('browse-from-empty-btn'),
@@ -56,6 +65,8 @@
     submitOrderBtn: document.getElementById('submit-order-btn'),
     orderConfirmation: document.getElementById('order-confirmation'),
     confirmOrderRef: document.getElementById('confirm-order-ref'),
+    confirmNotice: document.getElementById('confirm-notice'),
+    confirmOrderCard: document.getElementById('confirm-order-card'),
     confirmSummaryCard: document.getElementById('confirm-summary-card'),
     sendWhatsappBtn: document.getElementById('send-whatsapp-btn'),
     copyOrderBtn: document.getElementById('copy-order-btn'),
@@ -424,6 +435,7 @@
     } else {
       state.cart.push({ productId, size, qty: 1 });
     }
+    state.cartStep = 'items';
     saveJson(STORAGE_KEYS.CART, state.cart);
     renderCart();
     animateAddToCart(triggerBtn, product);
@@ -492,19 +504,36 @@
     }
 
     els.orderConfirmation.hidden = true;
-    els.drawerTitle.textContent = `Panier (${totalCount})`;
 
     if (lines.length === 0) {
       els.emptyCartState.hidden = false;
       els.cartFilledState.hidden = true;
+      els.drawerTitle.textContent = 'Mon Panier (0)';
+      state.cartStep = 'items';
       return;
     }
 
     els.emptyCartState.hidden = true;
     els.cartFilledState.hidden = false;
+
+    // Mise à jour des montants
     els.cartTotal.textContent = formatEuro(totalPrice);
-    const priceBadge = document.getElementById('submit-order-price-badge');
-    if (priceBadge) priceBadge.textContent = formatEuro(totalPrice);
+    if (els.summarySubtotal) els.summarySubtotal.textContent = formatEuro(totalPrice);
+    if (els.summaryItemsCount) els.summaryItemsCount.textContent = String(totalCount);
+    if (els.checkoutMiniTotal) els.checkoutMiniTotal.textContent = formatEuro(totalPrice);
+    if (els.reservationAmountText) els.reservationAmountText.textContent = formatEuro(totalPrice);
+    updateSubmitOrderBtnUi(totalPrice);
+
+    // Bascule Étape 1 (Articles) vs Étape 2 (Caisse & Paiement)
+    if (state.cartStep === 'checkout') {
+      if (els.cartStepItems) els.cartStepItems.hidden = true;
+      if (els.cartStepCheckout) els.cartStepCheckout.hidden = false;
+      els.drawerTitle.textContent = 'Caisse & Paiement';
+    } else {
+      if (els.cartStepItems) els.cartStepItems.hidden = false;
+      if (els.cartStepCheckout) els.cartStepCheckout.hidden = true;
+      els.drawerTitle.textContent = `Mon Panier (${totalCount})`;
+    }
 
     els.cartItemsList.innerHTML = lines.map(({ product, size, qty, lineTotal }) => `
       <li class="cart-item">
@@ -843,17 +872,49 @@
 
   function displayOrderConfirmation(order) {
     const text = buildOrderPlainText(order);
-    els.confirmOrderRef.textContent = `Réf. ${order.ref}`;
-    els.confirmSummaryCard.textContent = text;
+    if (els.confirmOrderRef) {
+      els.confirmOrderRef.textContent = `Réf. ${order.ref}`;
+    }
+    if (els.confirmSummaryCard) {
+      els.confirmSummaryCard.textContent = text;
+    }
 
     const isClub = (order.paymentMethod || '').toLowerCase().includes('retrait');
-    const noticeEl = document.querySelector('.confirm-notice');
+    const noticeEl = els.confirmNotice || document.getElementById('confirm-notice') || document.querySelector('.confirm-notice');
     if (noticeEl) {
       if (isClub) {
-        noticeEl.innerHTML = `<strong>⚠️ Attention réservation :</strong> Vous avez réservé votre équipement en ligne. Aucun débit n'a été effectué. Le règlement intégral de <strong>${formatEuro(order.total)}</strong> s'effectuera directement à l'accueil du dojo (en Espèces ou par Carte Bancaire).`;
+        noticeEl.className = 'confirm-notice is-reservation';
+        noticeEl.innerHTML = `<strong>🥋 Réservation au club enregistrée !</strong> Vos articles sont mis de côté. Le règlement intégral de <strong>${formatEuro(order.total)}</strong> s'effectuera directement à l'accueil du dojo lors du retrait (Espèces ou CB).`;
       } else {
-        noticeEl.innerHTML = `<strong>Paiement CB validé en ligne !</strong> Votre règlement de <strong>${formatEuro(order.total)}</strong> a été accepté. Vos équipements sont préparés et vous attendent au dojo.`;
+        noticeEl.className = 'confirm-notice is-paid';
+        noticeEl.innerHTML = `<strong>💳 Paiement en ligne validé !</strong> Votre commande de <strong>${formatEuro(order.total)}</strong> est confirmée. Vos équipements sont préparés et vous attendent à l'accueil.`;
       }
+    }
+
+    if (els.confirmOrderCard) {
+      els.confirmOrderCard.innerHTML = `
+        <div class="confirm-items-list">
+          ${order.items.map((it) => `
+            <div class="confirm-item-row">
+              ${it.image ? `<img src="${it.image}" alt="${escapeHtml(it.name)}" class="confirm-item-thumb" onerror="this.style.display='none'" />` : ''}
+              <div class="confirm-item-info">
+                <p class="confirm-item-name">${escapeHtml(it.name)}</p>
+                <div class="confirm-item-meta">Taille <strong>${escapeHtml(it.size)}</strong> · Qté ${it.qty}</div>
+              </div>
+              <div class="confirm-item-price">${formatEuro(it.lineTotal || (it.price * it.qty))}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="confirm-meta-details">
+          <div class="confirm-meta-line"><span>Adhérent :</span><strong>${escapeHtml(order.memberName || 'Client')}</strong></div>
+          ${order.memberPhone ? `<div class="confirm-meta-line"><span>Téléphone :</span><strong>${escapeHtml(order.memberPhone)}</strong></div>` : ''}
+          <div class="confirm-meta-line"><span>Règlement :</span><strong>${isClub ? 'Réservation (Paiement au club)' : 'Carte Bancaire (En ligne)'}</strong></div>
+        </div>
+        <div class="confirm-total-box">
+          <span class="confirm-total-label">Total TTC</span>
+          <span class="confirm-total-val">${formatEuro(order.total)}</span>
+        </div>
+      `;
     }
 
     const encodedText = encodeURIComponent(text);
@@ -1412,6 +1473,22 @@
       if (state.view === 'landing') enterShop('all');
     });
 
+    if (els.btnGotoCheckout) {
+      els.btnGotoCheckout.addEventListener('click', () => {
+        state.cartStep = 'checkout';
+        renderCart();
+        const nameInput = document.getElementById('member-name');
+        if (nameInput) nameInput.focus();
+      });
+    }
+
+    if (els.btnBackToItems) {
+      els.btnBackToItems.addEventListener('click', () => {
+        state.cartStep = 'items';
+        renderCart();
+      });
+    }
+
     els.checkoutForm.addEventListener('submit', handleCheckoutSubmit);
 
     // Bascule entre Paiement en ligne et Retrait au club
@@ -1473,16 +1550,18 @@
       });
     }
 
-    els.copyOrderBtn.addEventListener('click', async () => {
-      if (!state.lastOrder) return;
-      const text = buildOrderPlainText(state.lastOrder);
-      try {
-        await navigator.clipboard.writeText(text);
-        showToast('Commande copiée');
-      } catch {
-        showToast('Copie impossible automatiquement');
-      }
-    });
+    if (els.copyOrderBtn) {
+      els.copyOrderBtn.addEventListener('click', async () => {
+        if (!state.lastOrder) return;
+        const text = buildOrderPlainText(state.lastOrder);
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast('Commande copiée');
+        } catch {
+          showToast('Copie impossible automatiquement');
+        }
+      });
+    }
 
     els.printOrderBtn.addEventListener('click', () => {
       if (state.lastOrder) {
