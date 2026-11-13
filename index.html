@@ -333,12 +333,6 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             <span>Retrouver mes reçus dans mon Espace Adhérent</span>
           </button>
-          <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp btn-full" id="send-whatsapp-btn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-            </svg>
-            <span>Prévenir le club sur WhatsApp</span>
-          </a>
           <button type="button" class="btn btn-ghost" id="new-order-btn">Retourner à la boutique</button>
         </div>
       </div>
@@ -423,12 +417,20 @@
   <!-- Modal Espace Adhérent -->
   <div class="modal-backdrop" id="account-modal-backdrop" aria-hidden="true">
     <div class="modal-dialog modal-dialog-account" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
-      <button type="button" class="icon-close-btn modal-close" id="close-account-modal-btn" aria-label="Fermer">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M18 6 6 18" />
-          <path d="m6 6 12 12" />
-        </svg>
-      </button>
+      <div class="modal-fixed-top-bar">
+        <div class="modal-top-bar-left">
+          <span class="modal-top-badge">🥋 Dojo Club</span>
+          <span class="modal-top-title">Espace Adhérent</span>
+        </div>
+        <button type="button" class="icon-close-btn modal-top-close" id="close-account-modal-btn" aria-label="Fermer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="account-scroll-body">
 
       <!-- Vue Invité (Déconnecté) -->
       <div id="account-guest-view">
@@ -534,8 +536,14 @@
         </div>
 
         <div class="account-segmented" role="tablist">
-          <button type="button" class="account-tab-btn is-active" id="tab-member-orders-btn" data-logged-tab="orders">📄 Mes Commandes & Reçus PDF</button>
-          <button type="button" class="account-tab-btn" id="tab-member-profile-btn" data-logged-tab="profile">Mes Préférences</button>
+          <button type="button" class="account-tab-btn is-active" id="tab-member-orders-btn" data-logged-tab="orders">
+            <span class="tab-label-icon">📄</span>
+            <span class="tab-label-text">Mes Commandes<span class="tab-label-extra"> & Reçus</span></span>
+          </button>
+          <button type="button" class="account-tab-btn" id="tab-member-profile-btn" data-logged-tab="profile">
+            <span class="tab-label-icon">⚙️</span>
+            <span class="tab-label-text">Préférences</span>
+          </button>
         </div>
 
         <!-- Onglet 1 : Mes Commandes -->
@@ -590,6 +598,7 @@
           </form>
         </div>
       </div>
+      </div> <!-- /.account-scroll-body -->
     </div>
   </div>
 
