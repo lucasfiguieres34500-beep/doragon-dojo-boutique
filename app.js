@@ -194,10 +194,10 @@
   }
 
   function applySettingsToUi() {
-    els.headerClubName.textContent = state.settings.clubName;
-    els.landingClubName.textContent = state.settings.clubName;
-    els.footerClubName.textContent = state.settings.clubName;
-    els.footerClubNote.textContent = state.settings.footerNote;
+    if (els.headerClubName) els.headerClubName.textContent = state.settings.clubName;
+    if (els.landingClubName) els.landingClubName.textContent = state.settings.clubName;
+    if (els.footerClubName) els.footerClubName.textContent = state.settings.clubName;
+    if (els.footerClubNote) els.footerClubNote.textContent = state.settings.footerNote;
     document.title = `${state.settings.clubName} — Boutique Adhérents`;
   }
 
