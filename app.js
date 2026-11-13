@@ -1,7 +1,8 @@
 (() => {
   'use strict';
 
-  const { DEFAULT_SETTINGS, PRODUCTS: DEFAULT_PRODUCTS, createDefaultStock, normalizeStock } = window.CLUB_CATALOG;
+  const catalog = window.CLUB_CATALOG || window.ClubCatalog || {};
+  const { DEFAULT_SETTINGS = {}, PRODUCTS: DEFAULT_PRODUCTS = [], createDefaultStock = () => ({}), normalizeStock = () => ({}) } = catalog;
 
   const STORAGE_KEYS = {
     CART: 'club_shop_cart_v1',

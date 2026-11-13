@@ -119,5 +119,6 @@
     module.exports = exported;
   } else {
     root.ClubCatalog = exported;
+    root.CLUB_CATALOG = exported;
   }
 })(typeof window !== 'undefined' ? window : globalThis);
