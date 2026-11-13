@@ -133,6 +133,89 @@
 
   let toastTimer = null;
 
+  // Une seule gestion du défilement pour les fenêtres imbriquées, notamment sur iOS.
+  const overlayFocus = new WeakMap();
+  const overlayElements = [els.cartDrawer, els.productModalBackdrop, els.sizeGuideBackdrop, els.accountModalBackdrop];
+  let savedPageScroll = null;
+  let savedBodyOverflow = '';
+  let viewportFrame = 0;
+  let renderedCartStep = null;
+
+  function topOverlay() {
+    return overlayElements.filter((el) => el && el.classList.contains('is-open')).pop();
+  }
+
+  function updateOverlayViewport() {
+    cancelAnimationFrame(viewportFrame);
+    viewportFrame = requestAnimationFrame(() => {
+      const viewport = window.visualViewport;
+      if (viewport && viewport.scale !== 1) return; // Le zoom manuel reste disponible.
+      const style = document.documentElement.style;
+      style.setProperty('--overlay-height', (viewport ? viewport.height : window.innerHeight) + 'px');
+      style.setProperty('--overlay-top', (viewport ? viewport.offsetTop : 0) + 'px');
+    });
+  }
+
+  function syncOverlayState() {
+    const active = topOverlay();
+    if (active && savedPageScroll === null) {
+      savedPageScroll = window.scrollY;
+      savedBodyOverflow = document.body.style.overflow;
+      document.body.style.setProperty('--page-scroll-top', -savedPageScroll + 'px');
+      document.body.style.overflow = 'hidden';
+      document.body.classList.add('has-overlay');
+    }
+    document.body.classList.toggle('drawer-open', els.cartDrawer.classList.contains('is-open'));
+    document.body.classList.toggle('modal-open', overlayElements.slice(1).some((el) => el.classList.contains('is-open')));
+    document.querySelectorAll('body > header, body > main, body > footer').forEach((el) => { el.inert = Boolean(active); });
+    overlayElements.forEach((el) => { el.inert = el !== active; });
+    if (!active && savedPageScroll !== null) {
+      const scrollY = savedPageScroll;
+      savedPageScroll = null;
+      document.body.classList.remove('has-overlay');
+      document.body.style.removeProperty('--page-scroll-top');
+      document.body.style.overflow = savedBodyOverflow;
+      window.scrollTo({top: scrollY, behavior: 'instant'});
+    }
+    if (active) updateOverlayViewport();
+  }
+
+  function activateOverlay(el) {
+    if (!overlayFocus.has(el)) overlayFocus.set(el, document.activeElement);
+    syncOverlayState();
+    const dialog = el.matches('[role="dialog"]') ? el : el.querySelector('[role="dialog"]');
+    if (dialog) {
+      dialog.scrollTop = 0;
+      dialog.setAttribute('tabindex', '-1');
+      dialog.focus({preventScroll: true});
+    }
+  }
+
+  function deactivateOverlay(el) {
+    if (!el.classList.contains('is-open')) return;
+    el.classList.remove('is-open');
+    el.setAttribute('aria-hidden', 'true');
+    syncOverlayState();
+    const previous = overlayFocus.get(el);
+    overlayFocus.delete(el);
+    if (previous && previous.isConnected && !previous.closest('[inert]')) previous.focus({preventScroll: true});
+  }
+
+  function closeTopOverlay() {
+    const active = topOverlay();
+    if (active === els.accountModalBackdrop) closeAccountModal();
+    else if (active === els.sizeGuideBackdrop) closeSizeGuide();
+    else if (active === els.productModalBackdrop) closeProductModal();
+    else if (active === els.cartDrawer) closeCartDrawer();
+  }
+
+  window.addEventListener('resize', () => { if (topOverlay()) updateOverlayViewport(); }, {passive: true});
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => { if (topOverlay()) updateOverlayViewport(); }, {passive: true});
+    window.visualViewport.addEventListener('scroll', () => { if (topOverlay()) updateOverlayViewport(); }, {passive: true});
+  }
+
+
   function loadJson(key, fallback) {
     try {
       const raw = localStorage.getItem(key);
@@ -294,6 +377,7 @@
           <button
             type="button"
             class="size-pill ${size === selectedSize ? 'is-selected' : ''} ${qty <= 0 ? 'is-out' : ''}"
+            aria-pressed="${size === selectedSize}"
             data-action="select-size"
             data-product-id="${product.id}"
             data-size="${escapeHtml(size)}"
@@ -304,7 +388,7 @@
       return `
         <article class="product-card" data-product-id="${product.id}" style="--card-index:${index};">
           <div class="product-media" data-action="open-details" data-product-id="${product.id}">
-            <img src="${product.image}" alt="${escapeHtml(product.name)}" loading="lazy" />
+            <img src="${product.image}" alt="${escapeHtml(product.name)}" loading="lazy" decoding="async" />
           </div>
           <div class="product-body">
             <div class="product-top-row">
@@ -344,6 +428,23 @@
         </article>
       `;
     }).join('');
+  }
+
+
+  function updateProductSelection(productId) {
+    const product = state.products.find((item) => item.id === productId);
+    const card = [...els.productsGrid.children].find((item) => item.dataset.productId === productId);
+    if (!product || !card) return;
+    const size = state.selectedSizes[productId];
+    const stock = getAvailableStock(productId, size);
+    card.querySelector('.size-picker-label').innerHTML = '<span>Taille : <strong>' + escapeHtml(size) + '</strong></span>' + formatStockLabel(stock);
+    card.querySelectorAll('[data-action="select-size"]').forEach((button) => {
+      button.classList.toggle('is-selected', button.dataset.size === size);
+      button.setAttribute('aria-pressed', String(button.dataset.size === size));
+    });
+    const addButton = card.querySelector('[data-action="add-to-cart"]');
+    addButton.disabled = stock <= 0;
+    addButton.querySelector('span').textContent = stock <= 0 ? 'Rupture' : 'Ajouter';
   }
 
   function pulseCartButton() {
@@ -505,6 +606,11 @@
 
   function renderCart() {
     const { totalCount, totalPrice, lines } = computeCartDetails();
+    const step = state.lastOrder && lines.length === 0 ? 'confirmation' : state.cartStep;
+    if (renderedCartStep !== step) {
+      document.getElementById('drawer-body').scrollTop = 0;
+      renderedCartStep = step;
+    }
     els.cartCount.textContent = String(totalCount);
 
     if (state.lastOrder && lines.length === 0) {
@@ -572,19 +678,13 @@
     els.cartDrawer.classList.add('is-open');
     els.cartBackdrop.setAttribute('aria-hidden', 'false');
     els.cartDrawer.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('drawer-open');
-    document.body.style.overflow = 'hidden';
+    activateOverlay(els.cartDrawer);
   }
 
   function closeCartDrawer() {
     els.cartBackdrop.classList.remove('is-open');
-    els.cartDrawer.classList.remove('is-open');
     els.cartBackdrop.setAttribute('aria-hidden', 'true');
-    els.cartDrawer.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('drawer-open');
-    if (!els.accountModalBackdrop.classList.contains('is-open')) {
-      document.body.style.overflow = '';
-    }
+    deactivateOverlay(els.cartDrawer);
   }
 
   function openProductModal(productId) {
@@ -754,7 +854,7 @@
       pillsWrap.querySelectorAll('.size-pill').forEach((p) => {
         p.classList.toggle('is-selected', p.dataset.modalSize === modalSize);
       });
-      renderProducts();
+      updateProductSelection(product.id);
     });
 
     modalAddBtn.addEventListener('click', (e) => {
@@ -765,27 +865,21 @@
 
     els.productModalBackdrop.classList.add('is-open');
     els.productModalBackdrop.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
+    activateOverlay(els.productModalBackdrop);
   }
 
   function closeProductModal() {
-    els.productModalBackdrop.classList.remove('is-open');
-    els.productModalBackdrop.setAttribute('aria-hidden', 'true');
-    if (!els.cartDrawer.classList.contains('is-open')) {
-      document.body.style.overflow = '';
-    }
+    deactivateOverlay(els.productModalBackdrop);
   }
 
   function openSizeGuide() {
     els.sizeGuideBackdrop.classList.add('is-open');
     els.sizeGuideBackdrop.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
+    activateOverlay(els.sizeGuideBackdrop);
   }
 
   function closeSizeGuide() {
-    els.sizeGuideBackdrop.classList.remove('is-open');
-    els.sizeGuideBackdrop.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
+    deactivateOverlay(els.sizeGuideBackdrop);
   }
 
   function buildOrderPlainText(order) {
@@ -1383,18 +1477,12 @@
     }
     els.accountModalBackdrop.classList.add('is-open');
     els.accountModalBackdrop.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('modal-open');
-    document.body.style.overflow = 'hidden';
+    activateOverlay(els.accountModalBackdrop);
   }
 
   function closeAccountModal() {
     if (!els.accountModalBackdrop) return;
-    els.accountModalBackdrop.classList.remove('is-open');
-    els.accountModalBackdrop.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('modal-open');
-    if (!els.cartDrawer.classList.contains('is-open')) {
-      document.body.style.overflow = '';
-    }
+    deactivateOverlay(els.accountModalBackdrop);
     if (els.loginErrorMsg) els.loginErrorMsg.hidden = true;
     if (els.registerErrorMsg) els.registerErrorMsg.hidden = true;
     if (els.profileSuccessMsg) els.profileSuccessMsg.hidden = true;
@@ -1402,6 +1490,7 @@
   }
 
   function switchGuestTab(tab) {
+    els.accountModalBackdrop.querySelector('.account-scroll-body').scrollTop = 0;
     if (tab === 'register') {
       els.tabLoginBtn.classList.remove('is-active');
       els.tabRegisterBtn.classList.add('is-active');
@@ -1418,6 +1507,7 @@
   }
 
   function switchLoggedTab(tab) {
+    els.accountModalBackdrop.querySelector('.account-scroll-body').scrollTop = 0;
     if (tab === 'profile') {
       els.tabMemberOrdersBtn.classList.remove('is-active');
       els.tabMemberProfileBtn.classList.add('is-active');
@@ -1663,7 +1753,7 @@
 
       if (action === 'select-size') {
         state.selectedSizes[productId] = size;
-        renderProducts();
+        updateProductSelection(productId);
       } else if (action === 'add-to-cart') {
         addToCart(productId, null, btn);
       } else if (action === 'open-details') {
@@ -1838,10 +1928,22 @@
     });
 
     document.addEventListener('keydown', (e) => {
+      const active = topOverlay();
+      if (!active) return;
       if (e.key === 'Escape') {
-        closeCartDrawer();
-        closeProductModal();
-        closeSizeGuide();
+        e.preventDefault();
+        closeTopOverlay();
+      } else if (e.key === 'Tab') {
+        const controls = [...active.querySelectorAll('button, a[href], input, select, textarea, [tabindex="0"]')]
+          .filter((el) => !el.disabled && !el.closest('[inert]') && el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden');
+        const first = controls[0], last = controls[controls.length - 1];
+        if (e.shiftKey && (!controls.includes(document.activeElement) || document.activeElement === first)) {
+          e.preventDefault();
+          if (last) last.focus();
+        } else if (!e.shiftKey && (!controls.includes(document.activeElement) || document.activeElement === last)) {
+          e.preventDefault();
+          if (first) first.focus();
+        }
       }
     });
   }
@@ -1897,6 +1999,7 @@
     renderProducts();
     renderCart();
     bindEvents();
+    syncOverlayState();
     syncCatalogAndStockFromServer();
   }
 
