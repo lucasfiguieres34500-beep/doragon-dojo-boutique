@@ -25,9 +25,16 @@
     padding-right: env(safe-area-inset-right, 0px);
   }
 
-  .brand, .brand-text, .product-title, .product-modal-info,
-  .product-modal-gallery, .form-field, .account-tab-btn,
-  .modal-top-bar-left, .modal-top-title, .gestion-panel {
+  .brand,
+  .brand-text,
+  .product-title,
+  .product-modal-info,
+  .product-modal-gallery,
+  .form-field,
+  .account-tab-btn,
+  .modal-top-bar-left,
+  .modal-top-title,
+  .gestion-panel {
     min-width: 0;
   }
 
@@ -36,36 +43,76 @@
     text-overflow: ellipsis;
   }
 
-  .product-title, .product-modal-heading, .cart-item-title,
-  .account-alert, .confirm-ref-tag, .member-order-ref {
+  .product-title,
+  .product-modal-heading,
+  .cart-item-title,
+  .account-alert,
+  .confirm-ref-tag,
+  .member-order-ref {
     overflow-wrap: anywhere;
   }
 
-  button, a, input, select, textarea { touch-action: manipulation; }
-  input, select, textarea { font-size: 16px !important; }
-  .form-field input, .form-field select, .form-field textarea {
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+  .form-field input,
+  .form-field select,
+  .form-field textarea {
     min-width: 0;
     max-width: 100%;
     scroll-margin-block: 1rem;
   }
 
-  .account-trigger, .cart-trigger, .segmented-btn, .size-pill,
-  .gallery-pill-btn, .icon-close-btn, .modal-top-close,
-  .qty-stepper button, .stock-btn, .stock-delete-btn,
+  .account-trigger,
+  .cart-trigger,
+  .segmented-btn,
+  .size-pill,
+  .gallery-pill-btn,
+  .icon-close-btn,
+  .modal-top-close,
+  .qty-stepper button,
+  .stock-btn,
+  .stock-delete-btn,
   #toolbar-size-guide-btn {
     min-height: 44px;
   }
-  .account-trigger, .cart-trigger, .icon-close-btn, .modal-top-close,
-  .qty-stepper button, .stock-btn, .stock-delete-btn { min-width: 44px; }
-  .icon-close-btn, .modal-top-close, .btn svg { flex-shrink: 0; }
+  .account-trigger,
+  .cart-trigger,
+  .icon-close-btn,
+  .modal-top-close,
+  .qty-stepper button,
+  .stock-btn,
+  .stock-delete-btn {
+    min-width: 44px;
+  }
+  .icon-close-btn,
+  .modal-top-close,
+  .btn svg {
+    flex-shrink: 0;
+  }
 
   .landing-view {
     min-height: 100svh;
     padding: max(1.5rem, env(safe-area-inset-top)) 1rem max(1.5rem, env(safe-area-inset-bottom));
   }
-  .landing-inner { width: 100%; }
-  .landing-logo-wrap { max-width: min(76vw, 42svh); }
-  .btn-enter { max-width: 100%; }
+  .landing-inner {
+    width: 100%;
+  }
+  .landing-logo-wrap {
+    max-width: min(76vw, 42svh);
+  }
+  .btn-enter {
+    max-width: 100%;
+  }
 
   .cart-drawer {
     top: var(--overlay-top, 0px) !important;
@@ -80,7 +127,8 @@
     gap: 0.5rem;
     padding-top: max(0.85rem, env(safe-area-inset-top)) !important;
   }
-  .drawer-body, .account-scroll-body {
+  .drawer-body,
+  .account-scroll-body {
     min-height: 0;
     overscroll-behavior: contain;
     scroll-padding-block: 1rem;
@@ -91,19 +139,38 @@
     justify-content: flex-start;
     gap: 0.5rem 0.75rem;
   }
-  .qty-stepper { flex-shrink: 0; }
-  .cart-item-price, .checkout-total-pill { white-space: nowrap; }
-  .cart-remove-btn { min-height: 44px; padding: 0.4rem 0.5rem; }
-  .checkout-top-bar { flex-wrap: wrap; gap: 0.5rem; }
-  .card-inputs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .card-input-wrap { flex-wrap: wrap; gap: 0.5rem; }
-  .card-input-wrap input { padding-right: 0.75rem; }
-  .card-chips { position: static; margin-left: auto; }
-  .auth-required-btns { flex-wrap: wrap; }
-  .auth-required-btns .btn { flex-basis: 9rem; }
-  #submit-order-btn { gap: 0.75rem; padding-block: 0.75rem !important; }
-  .confirm-actions-stack .btn { white-space: normal; }
-  .confirm-actions-stack .btn span { min-width: 0; overflow-wrap: anywhere; }
+  .qty-stepper {
+    flex-shrink: 0;
+  }
+  .cart-item-price,
+  .checkout-total-pill {
+    white-space: nowrap;
+  }
+  .cart-remove-btn {
+    min-height: 44px;
+    padding: 0.4rem 0.5rem;
+  }
+  .checkout-top-bar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .auth-required-btns {
+    flex-wrap: wrap;
+  }
+  .auth-required-btns .btn {
+    flex-basis: 9rem;
+  }
+  #submit-order-btn {
+    gap: 0.75rem;
+    padding-block: 0.75rem !important;
+  }
+  .confirm-actions-stack .btn {
+    white-space: normal;
+  }
+  .confirm-actions-stack .btn span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
 
   .modal-backdrop {
     top: var(--overlay-top, 0px);
@@ -111,7 +178,8 @@
     height: var(--overlay-height, 100dvh);
     overscroll-behavior: contain;
   }
-  .modal-dialog, .modal-dialog-wide {
+  .modal-dialog,
+  .modal-dialog-wide {
     width: 100% !important;
     max-width: 100% !important;
     max-height: min(92dvh, var(--overlay-height, 100dvh)) !important;
@@ -121,12 +189,27 @@
     height: min(94dvh, var(--overlay-height, 100dvh)) !important;
     max-height: min(94dvh, var(--overlay-height, 100dvh)) !important;
   }
-  .modal-top-bar-left { flex: 1; flex-wrap: wrap; gap: 0.25rem 0.65rem; }
-  .modal-fixed-top-bar { gap: 0.5rem; }
-  .modal-top-badge { flex-shrink: 0; }
-  .account-form-switch { flex-wrap: wrap; }
-  .account-scroll-body { overflow-x: hidden; }
-  .member-orders-container { max-height: none; overflow: visible; }
+  .modal-top-bar-left {
+    flex: 1;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.65rem;
+  }
+  .modal-fixed-top-bar {
+    gap: 0.5rem;
+  }
+  .modal-top-badge {
+    flex-shrink: 0;
+  }
+  .account-form-switch {
+    flex-wrap: wrap;
+  }
+  .account-scroll-body {
+    overflow-x: hidden;
+  }
+  .member-orders-container {
+    max-height: none;
+    overflow: visible;
+  }
 
   /* La croix reste accessible même après défilement de la fiche produit. */
   .modal-close {
@@ -138,47 +221,121 @@
     margin-bottom: 0.25rem;
     z-index: 60;
   }
-  .product-modal-grid { grid-template-columns: minmax(0, 1fr); }
-  .product-gallery-viewport { max-height: 48svh; }
-  .product-gallery-slide { min-width: 0; }
-  .guide-card th, .guide-card td { padding-inline: 0.6rem; }
+  .product-modal-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .product-gallery-viewport {
+    max-height: 48svh;
+  }
+  .product-gallery-slide {
+    min-width: 0;
+  }
+  .guide-card th,
+  .guide-card td {
+    padding-inline: 0.6rem;
+  }
   .toast {
     z-index: 10010;
     bottom: calc(1rem + env(safe-area-inset-bottom));
   }
 
   /* Éviter les effets de survol persistants après un toucher. */
-  .product-card:hover { transform: none; }
-  .product-card:hover .product-media img { transform: none; }
+  .product-card:hover {
+    transform: none;
+  }
+  .product-card:hover .product-media img {
+    transform: none;
+  }
 
-  .gestion-header-actions { flex-wrap: wrap; }
-  body:has(.gestion-main) .header-inner { flex-wrap: wrap; }
-  body:has(.gestion-main) .brand { flex-basis: 100%; }
-  body:has(.gestion-main) .gestion-header-actions { width: 100%; }
-  body:has(.gestion-main) .gestion-header-actions .btn { flex: 1; min-height: 44px; }
-  .stock-size-row { flex-wrap: wrap; gap: 0.5rem; }
-  .admin-order-row, .confirm-meta-line { overflow-wrap: anywhere; }
-  .admin-order-top { flex-wrap: wrap; }
-  .member-order-item-row { flex-wrap: wrap; }
-  .member-order-item-row .item-name { min-width: 0; flex-basis: 100%; overflow-wrap: anywhere; }
-  .member-order-item-row .item-price, .confirm-item-price { white-space: nowrap; }
-  .brand > picture { display: block; flex-shrink: 0; }
+  .gestion-header-actions {
+    flex-wrap: wrap;
+  }
+  body:has(.gestion-main) .header-inner {
+    flex-wrap: wrap;
+  }
+  body:has(.gestion-main) .brand {
+    flex-basis: 100%;
+  }
+  body:has(.gestion-main) .gestion-header-actions {
+    width: 100%;
+  }
+  body:has(.gestion-main) .gestion-header-actions .btn {
+    flex: 1;
+    min-height: 44px;
+  }
+  .stock-size-row {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .admin-order-row,
+  .confirm-meta-line {
+    overflow-wrap: anywhere;
+  }
+  .admin-order-top {
+    flex-wrap: wrap;
+  }
+  .member-order-item-row {
+    flex-wrap: wrap;
+  }
+  .member-order-item-row .item-name {
+    min-width: 0;
+    flex-basis: 100%;
+    overflow-wrap: anywhere;
+  }
+  .member-order-item-row .item-price,
+  .confirm-item-price {
+    white-space: nowrap;
+  }
+  .brand > picture {
+    display: block;
+    flex-shrink: 0;
+  }
 }
 
 @media (min-width: 641px) and (max-width: 950px) and (hover: none) and (pointer: coarse) {
-  .brand-name { white-space: nowrap; }
-  .account-trigger-label, .cart-trigger-label { display: none; }
-  .products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .products-grid.is-single { grid-template-columns: minmax(0, 520px); }
-  .product-actions { flex-wrap: wrap; }
-  .product-actions .btn { min-width: 0; flex: 1; }
-  .modal-dialog-account { max-width: 520px !important; }
+  .brand-name {
+    white-space: nowrap;
+  }
+  .account-trigger-label,
+  .cart-trigger-label {
+    display: none;
+  }
+  .products-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .products-grid.is-single {
+    grid-template-columns: minmax(0, 520px);
+  }
+  .product-actions {
+    flex-wrap: wrap;
+  }
+  .product-actions .btn {
+    min-width: 0;
+    flex: 1;
+  }
+  .modal-dialog-account {
+    max-width: 520px !important;
+  }
 }
 
 @media (min-width: 600px) and (max-width: 950px) and (max-height: 500px) and (pointer: coarse) {
-  .product-modal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 1rem; }
-  .product-gallery-viewport { max-height: 60svh; }
-  .landing-logo-wrap { max-width: 30svh; margin-bottom: 0.5rem; }
-  .landing-inner h1 { font-size: 2rem; margin-bottom: 0.75rem; }
-  .landing-view { padding-block: 1rem; }
+  .product-modal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 1rem;
+  }
+  .product-gallery-viewport {
+    max-height: 60svh;
+  }
+  .landing-logo-wrap {
+    max-width: 30svh;
+    margin-bottom: 0.5rem;
+  }
+  .landing-inner h1 {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+  }
+  .landing-view {
+    padding-block: 1rem;
+  }
 }

@@ -2,7 +2,12 @@
   'use strict';
 
   const catalog = window.CLUB_CATALOG || window.ClubCatalog || {};
-  const { DEFAULT_SETTINGS = {}, PRODUCTS: DEFAULT_PRODUCTS = [], createDefaultStock = () => ({}), normalizeStock = () => ({}) } = catalog;
+  const {
+    DEFAULT_SETTINGS = {},
+    PRODUCTS: DEFAULT_PRODUCTS = [],
+    createDefaultStock = () => ({}),
+    normalizeStock = () => ({}),
+  } = catalog;
 
   const STORAGE_KEYS = {
     CART: 'club_shop_cart_v1',
@@ -10,13 +15,7 @@
     STOCK: 'club_shop_stock_v1',
     SETTINGS: 'club_shop_settings_v1',
     ORDERS: 'club_shop_orders_v1',
-    MEMBER: 'club_shop_member_v1'
-  };
-
-  const CATEGORY_TITLES = {
-    rashguard: 'Rashguards',
-    gants: 'Gants MMA',
-    all: 'Tout l\'équipement'
+    MEMBER: 'club_shop_member_v1',
   };
 
   const initialProducts = loadJson(STORAGE_KEYS.PRODUCTS, DEFAULT_PRODUCTS);
@@ -24,9 +23,17 @@
   const state = {
     view: 'landing',
     filter: 'all',
-    products: Array.isArray(initialProducts) && initialProducts.length ? initialProducts : DEFAULT_PRODUCTS,
-    selectedSizes: Object.fromEntries((Array.isArray(initialProducts) ? initialProducts : DEFAULT_PRODUCTS).map((p) => [p.id, p.defaultSize || (p.sizes && p.sizes[0]) || 'M'])),
-    stock: normalizeStock(loadJson(STORAGE_KEYS.STOCK, createDefaultStock(5, initialProducts)), initialProducts),
+    products: Array.isArray(initialProducts) ? initialProducts : DEFAULT_PRODUCTS,
+    selectedSizes: Object.fromEntries(
+      (Array.isArray(initialProducts) ? initialProducts : DEFAULT_PRODUCTS).map((p) => [
+        p.id,
+        p.defaultSize || (p.sizes && p.sizes[0]) || 'M',
+      ]),
+    ),
+    stock: normalizeStock(
+      loadJson(STORAGE_KEYS.STOCK, createDefaultStock(5, initialProducts)),
+      initialProducts,
+    ),
     cart: loadJson(STORAGE_KEYS.CART, []),
     cartStep: 'items',
     settings: { ...DEFAULT_SETTINGS, ...loadJson(STORAGE_KEYS.SETTINGS, {}) },
@@ -34,17 +41,42 @@
     lastOrder: null,
     member: loadJson(STORAGE_KEYS.MEMBER, null),
     memberOrders: [],
-    authOrigin: 'header'
+    authOrigin: 'header',
   };
 
   let stripeInstance = null;
-  let stripePublishableKey = null;
   let stripeElementsInstance = null;
   let stripePaymentElement = null;
-  let currentPaymentIntentRef = null;
-  let currentPaymentIntentSecret = null;
-  let stripeLoading = false;
-  let mountedTotal = 0;
+  let mountedCartKey = '';
+  let pendingCartKey = '';
+  let paymentGeneration = 0;
+  let stripeLoadPromise = null;
+  let checkoutBusy = false;
+  let reservationRequestId = null;
+  const pendingPayments = new Map();
+
+  function pendingPaymentId() {
+    if (!state.member) return null;
+    const key = 'club_shop_pending_payment_' + state.member.id;
+    try {
+      return sessionStorage.getItem(key) || pendingPayments.get(key);
+    } catch {
+      return pendingPayments.get(key);
+    }
+  }
+
+  function rememberPendingPayment(id) {
+    if (!state.member) return;
+    const key = 'club_shop_pending_payment_' + state.member.id;
+    if (id) pendingPayments.set(key, id);
+    else pendingPayments.delete(key);
+    try {
+      if (id) sessionStorage.setItem(key, id);
+      else sessionStorage.removeItem(key);
+    } catch {
+      // Le suivi reste disponible en mémoire si le stockage privé est bloqué.
+    }
+  }
 
   const els = {
     landingView: document.getElementById('landing-view'),
@@ -89,9 +121,6 @@
     confirmOrderRef: document.getElementById('confirm-order-ref'),
     confirmNotice: document.getElementById('confirm-notice'),
     confirmOrderCard: document.getElementById('confirm-order-card'),
-    confirmSummaryCard: document.getElementById('confirm-summary-card'),
-    sendWhatsappBtn: document.getElementById('send-whatsapp-btn'),
-    copyOrderBtn: document.getElementById('copy-order-btn'),
     printOrderBtn: document.getElementById('print-order-btn'),
     newOrderBtn: document.getElementById('new-order-btn'),
     productModalBackdrop: document.getElementById('product-modal-backdrop'),
@@ -103,7 +132,6 @@
     headerClubName: document.getElementById('header-club-name'),
     landingClubName: document.getElementById('landing-club-name'),
     footerClubName: document.getElementById('footer-club-name'),
-    footerClubNote: document.getElementById('footer-club-note'),
     toast: document.getElementById('toast'),
     accountBtn: document.getElementById('account-btn'),
     accountBtnAvatar: document.getElementById('account-btn-avatar'),
@@ -137,14 +165,110 @@
     profGlovesSize: document.getElementById('prof-gloves-size'),
     profileSuccessMsg: document.getElementById('profile-success-msg'),
     profileErrorMsg: document.getElementById('profile-error-msg'),
-    cartMemberBanner: document.getElementById('cart-member-banner'),
   };
+
+  function paymentCartKey() {
+    return JSON.stringify([
+      state.member?.id,
+      state.cart.map(({ productId, size, qty }) => [productId, size, qty]),
+      computeCartDetails().totalPrice,
+    ]);
+  }
+
+  function resetStripePayment() {
+    paymentGeneration += 1;
+    pendingCartKey = '';
+    if (stripePaymentElement) stripePaymentElement.destroy();
+    stripePaymentElement = null;
+    stripeElementsInstance = null;
+    mountedCartKey = '';
+  }
+
+  async function loadStripe() {
+    if (stripeInstance) return stripeInstance;
+    if (!stripeLoadPromise)
+      stripeLoadPromise = (async () => {
+        const response = await fetch('/api/stripe-config');
+        const config = await response.json();
+        if (!response.ok || !config.publishableKey)
+          throw new Error(
+            'Paiement en ligne indisponible. Vous pouvez choisir le paiement au club.',
+          );
+        if (typeof window.Stripe !== 'function')
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            const timer = setTimeout(() => {
+              script.remove();
+              reject(
+                new Error('Le module bancaire met trop de temps à répondre. Réessayez.'),
+              );
+            }, 15000);
+            script.src = 'https://js.stripe.com/v3/';
+            script.onload = () => {
+              clearTimeout(timer);
+              resolve();
+            };
+            script.onerror = () => {
+              clearTimeout(timer);
+              script.remove();
+              reject(new Error('Impossible de charger le module bancaire. Réessayez.'));
+            };
+            document.head.appendChild(script);
+          });
+        stripeInstance = window.Stripe(config.publishableKey);
+        return stripeInstance;
+      })().catch((error) => {
+        stripeLoadPromise = null;
+        throw error;
+      });
+    return stripeLoadPromise;
+  }
+
+  function completeOrder(data) {
+    if (!data.ok || !data.order)
+      throw new Error(
+        data.error || 'La commande n’a pas été enregistrée. Votre panier est conservé.',
+      );
+    const order = data.order;
+    if (data.stock) {
+      state.stock = normalizeStock(data.stock, state.products);
+      saveJson(STORAGE_KEYS.STOCK, state.stock);
+    }
+    state.orders = [order, ...state.orders.filter((entry) => entry.ref !== order.ref)].slice(
+      0,
+      100,
+    );
+    if (state.member)
+      state.memberOrders = [
+        order,
+        ...state.memberOrders.filter((entry) => entry.ref !== order.ref),
+      ];
+    saveJson(STORAGE_KEYS.ORDERS, state.orders);
+    state.lastOrder = order;
+    state.cart = [];
+    saveJson(STORAGE_KEYS.CART, []);
+    resetStripePayment();
+    els.checkoutForm.reset();
+    document.getElementById('opt-label-online').classList.add('is-active');
+    document.getElementById('opt-label-club').classList.remove('is-active');
+    document.getElementById('online-card-panel').hidden = false;
+    document.getElementById('club-reservation-panel').hidden = true;
+    displayOrderConfirmation(order);
+    rememberPendingPayment(null);
+    renderProducts();
+    renderCart();
+  }
 
   let toastTimer = null;
 
   // Une seule gestion du défilement pour les fenêtres imbriquées, notamment sur iOS.
   const overlayFocus = new WeakMap();
-  const overlayElements = [els.cartDrawer, els.productModalBackdrop, els.sizeGuideBackdrop, els.accountModalBackdrop];
+  const overlayElements = [
+    els.cartDrawer,
+    els.productModalBackdrop,
+    els.sizeGuideBackdrop,
+    els.accountModalBackdrop,
+  ];
   let savedPageScroll = null;
   let savedBodyOverflow = '';
   let viewportFrame = 0;
@@ -160,7 +284,10 @@
       const viewport = window.visualViewport;
       if (viewport && viewport.scale !== 1) return; // Le zoom manuel reste disponible.
       const style = document.documentElement.style;
-      style.setProperty('--overlay-height', (viewport ? viewport.height : window.innerHeight) + 'px');
+      style.setProperty(
+        '--overlay-height',
+        (viewport ? viewport.height : window.innerHeight) + 'px',
+      );
       style.setProperty('--overlay-top', (viewport ? viewport.offsetTop : 0) + 'px');
     });
   }
@@ -174,17 +301,27 @@
       document.body.style.overflow = 'hidden';
       document.body.classList.add('has-overlay');
     }
-    document.body.classList.toggle('drawer-open', els.cartDrawer.classList.contains('is-open'));
-    document.body.classList.toggle('modal-open', overlayElements.slice(1).some((el) => el.classList.contains('is-open')));
-    document.querySelectorAll('body > header, body > main, body > footer').forEach((el) => { el.inert = Boolean(active); });
-    overlayElements.forEach((el) => { el.inert = el !== active; });
+    document.body.classList.toggle(
+      'drawer-open',
+      els.cartDrawer.classList.contains('is-open'),
+    );
+    document.body.classList.toggle(
+      'modal-open',
+      overlayElements.slice(1).some((el) => el.classList.contains('is-open')),
+    );
+    document.querySelectorAll('body > header, body > main, body > footer').forEach((el) => {
+      el.inert = Boolean(active);
+    });
+    overlayElements.forEach((el) => {
+      el.inert = el !== active;
+    });
     if (!active && savedPageScroll !== null) {
       const scrollY = savedPageScroll;
       savedPageScroll = null;
       document.body.classList.remove('has-overlay');
       document.body.style.removeProperty('--page-scroll-top');
       document.body.style.overflow = savedBodyOverflow;
-      window.scrollTo({top: scrollY, behavior: 'instant'});
+      window.scrollTo({ top: scrollY, behavior: 'instant' });
     }
     if (active) updateOverlayViewport();
   }
@@ -196,7 +333,7 @@
     if (dialog) {
       dialog.scrollTop = 0;
       dialog.setAttribute('tabindex', '-1');
-      dialog.focus({preventScroll: true});
+      dialog.focus({ preventScroll: true });
     }
   }
 
@@ -207,7 +344,8 @@
     syncOverlayState();
     const previous = overlayFocus.get(el);
     overlayFocus.delete(el);
-    if (previous && previous.isConnected && !previous.closest('[inert]')) previous.focus({preventScroll: true});
+    if (previous && previous.isConnected && !previous.closest('[inert]'))
+      previous.focus({ preventScroll: true });
   }
 
   function closeTopOverlay() {
@@ -218,17 +356,39 @@
     else if (active === els.cartDrawer) closeCartDrawer();
   }
 
-  window.addEventListener('resize', () => { if (topOverlay()) updateOverlayViewport(); }, {passive: true});
+  window.addEventListener(
+    'resize',
+    () => {
+      if (topOverlay()) updateOverlayViewport();
+    },
+    { passive: true },
+  );
   if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', () => { if (topOverlay()) updateOverlayViewport(); }, {passive: true});
-    window.visualViewport.addEventListener('scroll', () => { if (topOverlay()) updateOverlayViewport(); }, {passive: true});
+    window.visualViewport.addEventListener(
+      'resize',
+      () => {
+        if (topOverlay()) updateOverlayViewport();
+      },
+      { passive: true },
+    );
+    window.visualViewport.addEventListener(
+      'scroll',
+      () => {
+        if (topOverlay()) updateOverlayViewport();
+      },
+      { passive: true },
+    );
   }
-
 
   function loadJson(key, fallback) {
     try {
       const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
+      if (!raw) return fallback;
+      const value = JSON.parse(raw);
+      if (Array.isArray(fallback)) return Array.isArray(value) ? value : fallback;
+      if (fallback && typeof fallback === 'object')
+        return value && typeof value === 'object' && !Array.isArray(value) ? value : fallback;
+      return value;
     } catch {
       return fallback;
     }
@@ -290,7 +450,6 @@
     if (els.headerClubName) els.headerClubName.textContent = state.settings.clubName;
     if (els.landingClubName) els.landingClubName.textContent = state.settings.clubName;
     if (els.footerClubName) els.footerClubName.textContent = state.settings.clubName;
-    if (els.footerClubNote) els.footerClubNote.textContent = state.settings.footerNote;
     document.title = `${state.settings.clubName} — Boutique Adhérents`;
   }
 
@@ -336,7 +495,10 @@
     els.shopView.hidden = true;
     els.landingView.classList.remove('is-leaving');
     els.landingView.hidden = false;
-    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    window.scrollTo({
+      top: 0,
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    });
   }
 
   function setFilter(category) {
@@ -371,18 +533,21 @@
   }
 
   function renderProducts() {
-    const filtered = state.filter === 'all'
-      ? state.products
-      : state.products.filter((p) => p.category === state.filter);
+    const filtered =
+      state.filter === 'all'
+        ? state.products
+        : state.products.filter((p) => p.category === state.filter);
 
     els.productsGrid.classList.toggle('is-single', filtered.length === 1);
 
-    els.productsGrid.innerHTML = filtered.map((product, index) => {
-      const selectedSize = ensureAvailableSelection(product);
-      const selectedStock = getAvailableStock(product.id, selectedSize);
-      const sizeButtons = product.sizes.map((size) => {
-        const qty = getAvailableStock(product.id, size);
-        return `
+    els.productsGrid.innerHTML = filtered
+      .map((product, index) => {
+        const selectedSize = ensureAvailableSelection(product);
+        const selectedStock = getAvailableStock(product.id, selectedSize);
+        const sizeButtons = product.sizes
+          .map((size) => {
+            const qty = getAvailableStock(product.id, size);
+            return `
           <button
             type="button"
             class="size-pill ${size === selectedSize ? 'is-selected' : ''} ${qty <= 0 ? 'is-out' : ''}"
@@ -392,9 +557,10 @@
             data-size="${escapeHtml(size)}"
           >${escapeHtml(size)}</button>
         `;
-      }).join('');
+          })
+          .join('');
 
-      return `
+        return `
         <article class="product-card" data-product-id="${product.id}" style="--card-index:${index};">
           <div class="product-media" data-action="open-details" data-product-id="${product.id}">
             <img src="${product.image}" alt="${escapeHtml(product.name)}" loading="lazy" decoding="async" />
@@ -436,17 +602,23 @@
           </div>
         </article>
       `;
-    }).join('');
+      })
+      .join('');
   }
-
 
   function updateProductSelection(productId) {
     const product = state.products.find((item) => item.id === productId);
-    const card = [...els.productsGrid.children].find((item) => item.dataset.productId === productId);
+    const card = [...els.productsGrid.children].find(
+      (item) => item.dataset.productId === productId,
+    );
     if (!product || !card) return;
     const size = state.selectedSizes[productId];
     const stock = getAvailableStock(productId, size);
-    card.querySelector('.size-picker-label').innerHTML = '<span>Taille : <strong>' + escapeHtml(size) + '</strong></span>' + formatStockLabel(stock);
+    card.querySelector('.size-picker-label').innerHTML =
+      '<span>Taille : <strong>' +
+      escapeHtml(size) +
+      '</strong></span>' +
+      formatStockLabel(stock);
     card.querySelectorAll('[data-action="select-size"]').forEach((button) => {
       button.classList.toggle('is-selected', button.dataset.size === size);
       button.setAttribute('aria-pressed', String(button.dataset.size === size));
@@ -539,7 +711,9 @@
     const size = customSize || state.selectedSizes[productId] || product.defaultSize;
     const available = getAvailableStock(productId, size);
 
-    const existing = state.cart.find((item) => item.productId === productId && item.size === size);
+    const existing = state.cart.find(
+      (item) => item.productId === productId && item.size === size,
+    );
     const currentInCart = existing ? existing.qty : 0;
 
     if (available <= 0) {
@@ -548,7 +722,9 @@
     }
 
     if (currentInCart + 1 > available) {
-      showToast(`Stock maximum atteint (${available} disponible${available > 1 ? 's' : ''}).`);
+      showToast(
+        `Stock maximum atteint (${available} disponible${available > 1 ? 's' : ''}).`,
+      );
       return;
     }
 
@@ -558,18 +734,22 @@
       state.cart.push({ productId, size, qty: 1 });
     }
     state.cartStep = 'items';
+    resetStripePayment();
+    reservationRequestId = null;
     saveJson(STORAGE_KEYS.CART, state.cart);
     renderCart();
     animateAddToCart(triggerBtn, product);
     showToast(`${product.name} (${size}) ajouté`, {
       image: product.image,
       title: product.name,
-      subtitle: `${product.sizeLabel} ${size} · Ajouté au panier`
+      subtitle: `${product.sizeLabel} ${size} · Ajouté au panier`,
     });
   }
 
   function updateCartQty(productId, size, delta) {
-    const item = state.cart.find((entry) => entry.productId === productId && entry.size === size);
+    const item = state.cart.find(
+      (entry) => entry.productId === productId && entry.size === size,
+    );
     if (!item) return;
     if (delta > 0) {
       const available = getAvailableStock(productId, size);
@@ -580,14 +760,22 @@
     }
     item.qty += delta;
     if (item.qty <= 0) {
-      state.cart = state.cart.filter((entry) => !(entry.productId === productId && entry.size === size));
+      state.cart = state.cart.filter(
+        (entry) => !(entry.productId === productId && entry.size === size),
+      );
     }
+    resetStripePayment();
+    reservationRequestId = null;
     saveJson(STORAGE_KEYS.CART, state.cart);
     renderCart();
   }
 
   function removeCartItem(productId, size) {
-    state.cart = state.cart.filter((entry) => !(entry.productId === productId && entry.size === size));
+    state.cart = state.cart.filter(
+      (entry) => !(entry.productId === productId && entry.size === size),
+    );
+    resetStripePayment();
+    reservationRequestId = null;
     saveJson(STORAGE_KEYS.CART, state.cart);
     renderCart();
   }
@@ -606,7 +794,7 @@
         product,
         size: entry.size,
         qty: entry.qty,
-        lineTotal: product.price * entry.qty
+        lineTotal: product.price * entry.qty,
       });
     });
 
@@ -614,88 +802,45 @@
   }
 
   async function initStripePaymentElement() {
-    const radioClub = document.querySelector('input[name="paymentOption"][value="club"]');
-    if (radioClub && radioClub.checked) return;
-
-    const { lines, totalPrice } = computeCartDetails();
-    if (lines.length === 0) return;
-
-    const container = document.getElementById('stripe-payment-element');
-    if (!container) return;
-
-    // Si déjà monté pour le même montant et toujours valide, ne pas recréer
-    if (stripePaymentElement && currentPaymentIntentSecret && mountedTotal === totalPrice && container.children.length > 0 && !container.querySelector('.stripe-loading-skeleton')) {
+    if (
+      !state.member ||
+      pendingPaymentId() ||
+      state.cartStep !== 'checkout' ||
+      document.querySelector('input[name="paymentOption"][value="club"]').checked
+    )
       return;
-    }
-
-    if (stripeLoading) return;
-    stripeLoading = true;
-
+    const key = paymentCartKey();
+    if (
+      !computeCartDetails().lines.length ||
+      (stripePaymentElement && mountedCartKey === key) ||
+      pendingCartKey === key
+    )
+      return;
+    const generation = ++paymentGeneration;
+    pendingCartKey = key;
+    const container = document.getElementById('stripe-payment-element');
     try {
-      if (!stripeInstance) {
-        if (!stripePublishableKey) {
-          const cfg = await fetch('/api/stripe-config').then(r => r.json()).catch(() => ({}));
-          if (cfg && cfg.ok && cfg.publishableKey) stripePublishableKey = cfg.publishableKey;
-        }
-        if (typeof window.Stripe === 'function' && stripePublishableKey) {
-          stripeInstance = window.Stripe(stripePublishableKey);
-        }
-      }
-
-      if (!currentPaymentIntentSecret || mountedTotal !== totalPrice) {
-        const memberName = (document.getElementById('member-name')?.value || '').trim() || (state.member?.name || '');
-        const memberEmail = (document.getElementById('member-email')?.value || '').trim() || (state.member?.email || '');
-        const memberPhone = (document.getElementById('member-phone')?.value || '').trim() || (state.member?.phone || '');
-
-        const res = await fetch('/api/create-payment-intent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            items: lines.map(({ product, size, qty, lineTotal }) => ({
-              id: product.id,
-              name: product.name,
-              size,
-              qty,
-              lineTotal
-            })),
-            memberName,
-            memberEmail,
-            memberPhone
-          })
-        });
-
-        const data = await res.json();
-        if (!res.ok || !data.ok || !data.clientSecret) {
-          container.innerHTML = `
-            <div class="payment-error-message">
-              ${escapeHtml(data.error || 'Erreur lors de l\'initialisation du paiement.')}
-            </div>
-          `;
-          stripeLoading = false;
-          return;
-        }
-
-        currentPaymentIntentSecret = data.clientSecret;
-        currentPaymentIntentRef = data.ref;
-        mountedTotal = totalPrice;
-
-        if (!stripeInstance && data.publishableKey && typeof window.Stripe === 'function') {
-          stripeInstance = window.Stripe(data.publishableKey);
-        }
-      }
-
-      if (!stripeInstance) {
-        stripeLoading = false;
-        return;
-      }
-
-      if (stripePaymentElement) {
-        try { stripePaymentElement.unmount(); } catch (_) {}
-        stripePaymentElement = null;
-      }
-
+      await loadStripe();
+      if (generation !== paymentGeneration) return;
+      const response = await fetch('/api/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: state.cart.map(({ productId, size, qty }) => ({
+            id: productId,
+            size,
+            qty,
+          })),
+        }),
+      });
+      const data = await response.json();
+      if (generation !== paymentGeneration || key !== paymentCartKey()) return;
+      if (!response.ok || !data.clientSecret)
+        throw new Error(data.error || 'Impossible de préparer le paiement.');
+      if (stripePaymentElement) stripePaymentElement.destroy();
+      mountedCartKey = key;
       stripeElementsInstance = stripeInstance.elements({
-        clientSecret: currentPaymentIntentSecret,
+        clientSecret: data.clientSecret,
         appearance: {
           theme: 'night',
           variables: {
@@ -705,71 +850,64 @@
             colorDanger: '#ef4444',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
             borderRadius: '10px',
-            spacingUnit: '4px'
+            spacingUnit: '4px',
           },
           rules: {
             '.Tab': {
               border: '1px solid rgba(255, 255, 255, 0.12)',
-              backgroundColor: '#071326'
+              backgroundColor: '#071326',
             },
             '.Tab:hover': {
-              border: '1px solid #e5b24c'
+              border: '1px solid #e5b24c',
             },
             '.Tab--selected': {
               borderColor: '#e5b24c',
-              backgroundColor: 'rgba(229, 178, 76, 0.12)'
+              backgroundColor: 'rgba(229, 178, 76, 0.12)',
             },
             '.Input': {
               border: '1px solid rgba(255, 255, 255, 0.15)',
-              backgroundColor: '#071326'
+              backgroundColor: '#071326',
             },
             '.Input:focus': {
               border: '1px solid #e5b24c',
-              boxShadow: '0 0 0 1px #e5b24c'
-            }
-          }
-        }
+              boxShadow: '0 0 0 1px #e5b24c',
+            },
+          },
+        },
       });
-
-      const memberName = (document.getElementById('member-name')?.value || '').trim() || (state.member?.name || '');
-      const memberEmail = (document.getElementById('member-email')?.value || '').trim() || (state.member?.email || '');
-      const memberPhone = (document.getElementById('member-phone')?.value || '').trim() || (state.member?.phone || '');
-
       stripePaymentElement = stripeElementsInstance.create('payment', {
-        layout: {
-          type: 'tabs',
-          defaultCollapsed: false
-        },
-        wallets: {
-          applePay: 'auto',
-          googlePay: 'auto'
-        },
-        fields: {
-          billingDetails: {
-            name: 'auto',
-            email: 'auto',
-            phone: 'auto'
-          }
-        },
+        layout: { type: 'tabs', defaultCollapsed: false },
+        wallets: { applePay: 'auto', googlePay: 'auto' },
         defaultValues: {
           billingDetails: {
-            name: memberName || undefined,
-            email: memberEmail || undefined,
-            phone: memberPhone || undefined
-          }
-        }
+            name: state.member.name,
+            email: state.member.email,
+            phone: state.member.phone,
+          },
+        },
       });
-
-      container.innerHTML = '';
+      container.replaceChildren();
+      stripePaymentElement.on('loaderror', () => {
+        if (generation === paymentGeneration)
+          showToast('Le formulaire bancaire n’a pas pu être chargé. Réessayez.');
+      });
       stripePaymentElement.mount('#stripe-payment-element');
-    } catch (err) {
-      container.innerHTML = `
-        <div class="payment-error-message">
-          Impossible de charger le formulaire de paiement sécurisé.
-        </div>
-      `;
+    } catch (error) {
+      if (generation !== paymentGeneration) return;
+      const message = document.createElement('div');
+      message.className = 'payment-error-message';
+      message.textContent = error.message;
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'btn btn-secondary btn-sm';
+      retry.textContent = 'Réessayer';
+      retry.addEventListener('click', () => {
+        pendingCartKey = '';
+        initStripePaymentElement();
+      });
+      container.replaceChildren(message, retry);
     } finally {
-      stripeLoading = false;
+      if (generation === paymentGeneration) pendingCartKey = '';
     }
   }
 
@@ -808,7 +946,8 @@
     if (els.summarySubtotal) els.summarySubtotal.textContent = formatEuro(totalPrice);
     if (els.summaryItemsCount) els.summaryItemsCount.textContent = String(totalCount);
     if (els.checkoutMiniTotal) els.checkoutMiniTotal.textContent = formatEuro(totalPrice);
-    if (els.reservationAmountText) els.reservationAmountText.textContent = formatEuro(totalPrice);
+    if (els.reservationAmountText)
+      els.reservationAmountText.textContent = formatEuro(totalPrice);
     updateSubmitOrderBtnUi(totalPrice);
 
     // Bascule Étape 1 (Articles) vs Étape 2 (Caisse & Paiement)
@@ -823,7 +962,9 @@
       els.drawerTitle.textContent = `Mon Panier (${totalCount})`;
     }
 
-    els.cartItemsList.innerHTML = lines.map(({ product, size, qty, lineTotal }) => `
+    els.cartItemsList.innerHTML = lines
+      .map(
+        ({ product, size, qty, lineTotal }) => `
       <li class="cart-item">
         <img src="${product.image}" alt="${escapeHtml(product.name)}" class="cart-item-img" />
         <div class="cart-item-info">
@@ -840,7 +981,9 @@
           </div>
         </div>
       </li>
-    `).join('');
+    `,
+      )
+      .join('');
   }
 
   function openCartDrawer() {
@@ -849,12 +992,6 @@
     els.cartBackdrop.setAttribute('aria-hidden', 'false');
     els.cartDrawer.setAttribute('aria-hidden', 'false');
     activateOverlay(els.cartDrawer);
-
-    // Pré-chargement immédiat en arrière-plan pour que le paiement soit instantané
-    const { lines } = computeCartDetails();
-    if (lines.length > 0 && !currentPaymentIntentSecret && !stripeLoading) {
-      setTimeout(initStripePaymentElement, 50);
-    }
   }
 
   function closeCartDrawer() {
@@ -871,34 +1008,35 @@
     let modalSize = selectedSize;
     const modalStock = getAvailableStock(product.id, modalSize);
 
-    const sizePills = product.sizes.map((size) => {
-      const qty = getAvailableStock(product.id, size);
-      return `
+    const sizePills = product.sizes
+      .map((size) => {
+        const qty = getAvailableStock(product.id, size);
+        return `
         <button
           type="button"
           class="size-pill ${size === selectedSize ? 'is-selected' : ''} ${qty <= 0 ? 'is-out' : ''}"
           data-modal-size="${escapeHtml(size)}"
         >${escapeHtml(size)}</button>
       `;
-    }).join('');
+      })
+      .join('');
 
-    const galleryImages = Array.isArray(product.images) && product.images.length > 0
-      ? product.images
-      : (product.id === 'rashguard-mc'
+    const galleryImages =
+      Array.isArray(product.images) && product.images.length > 0
+        ? product.images
+        : product.id === 'rashguard-mc'
           ? [
               { src: 'assets/rashguard-mc-front-white.jpg', label: 'Face' },
               { src: 'assets/rashguard-mc-back-white.jpg', label: 'Dos' },
-              { src: 'assets/rashguard-luta-livre.jpg', label: 'Vue 360°' }
+              { src: 'assets/rashguard-luta-livre.jpg', label: 'Vue 360°' },
             ]
           : product.id === 'rashguard-camo'
             ? [
                 { src: 'assets/rashguard-camo-front-white.jpg', label: 'Face' },
                 { src: 'assets/rashguard-camo-back-white.jpg', label: 'Dos' },
-                { src: 'assets/rashguard-camo.jpg', label: 'Vue 360°' }
+                { src: 'assets/rashguard-camo.jpg', label: 'Vue 360°' },
               ]
-            : [
-                { src: product.image || 'assets/gants-mma.jpg', label: 'Face' }
-              ]);
+            : [{ src: product.image || 'assets/gants-mma.jpg', label: 'Face' }];
 
     let activeImageIndex = 0;
 
@@ -907,13 +1045,19 @@
         <div class="product-modal-gallery">
           <div class="product-gallery-viewport" id="modal-gallery-viewport">
             <div class="product-gallery-track" id="modal-gallery-track">
-              ${galleryImages.map((img, i) => `
+              ${galleryImages
+                .map(
+                  (img, i) => `
                 <div class="product-gallery-slide ${i === 0 ? 'is-active' : ''}" data-slide-index="${i}">
                   <img src="${img.src}" alt="${escapeHtml(product.name)} - ${escapeHtml(img.label)}" class="product-modal-img" />
                 </div>
-              `).join('')}
+              `,
+                )
+                .join('')}
             </div>
-            ${galleryImages.length > 1 ? `
+            ${
+              galleryImages.length > 1
+                ? `
               <button type="button" class="gallery-arrow gallery-prev" id="gallery-prev-btn" aria-label="Image précédente">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
@@ -921,17 +1065,27 @@
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
               <div class="gallery-counter" id="gallery-counter">1 / ${galleryImages.length}</div>
-            ` : ''}
+            `
+                : ''
+            }
           </div>
-          ${galleryImages.length > 1 ? `
+          ${
+            galleryImages.length > 1
+              ? `
             <div class="gallery-nav-pills" id="gallery-nav-pills">
-              ${galleryImages.map((img, i) => `
+              ${galleryImages
+                .map(
+                  (img, i) => `
                 <button type="button" class="gallery-pill-btn ${i === 0 ? 'is-active' : ''}" data-target-slide="${i}">
                   <span>${escapeHtml(img.label)}</span>
                 </button>
-              `).join('')}
+              `,
+                )
+                .join('')}
             </div>
-          ` : ''}
+          `
+              : ''
+          }
         </div>
         <div class="product-modal-info">
           <h2 id="modal-product-title" class="product-modal-heading">${escapeHtml(product.name)}</h2>
@@ -997,19 +1151,27 @@
     if (viewport && galleryImages.length > 1) {
       let touchStartX = 0;
       let touchStartY = 0;
-      viewport.addEventListener('touchstart', (e) => {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-      }, { passive: true });
+      viewport.addEventListener(
+        'touchstart',
+        (e) => {
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+        },
+        { passive: true },
+      );
 
-      viewport.addEventListener('touchend', (e) => {
-        const deltaX = e.changedTouches[0].clientX - touchStartX;
-        const deltaY = e.changedTouches[0].clientY - touchStartY;
-        if (Math.abs(deltaX) > 35 && Math.abs(deltaX) > Math.abs(deltaY)) {
-          if (deltaX < 0) updateGallery(activeImageIndex + 1);
-          else updateGallery(activeImageIndex - 1);
-        }
-      }, { passive: true });
+      viewport.addEventListener(
+        'touchend',
+        (e) => {
+          const deltaX = e.changedTouches[0].clientX - touchStartX;
+          const deltaY = e.changedTouches[0].clientY - touchStartY;
+          if (Math.abs(deltaX) > 35 && Math.abs(deltaX) > Math.abs(deltaY)) {
+            if (deltaX < 0) updateGallery(activeImageIndex + 1);
+            else updateGallery(activeImageIndex - 1);
+          }
+        },
+        { passive: true },
+      );
     }
 
     const pillsWrap = document.getElementById('modal-size-pills');
@@ -1058,279 +1220,131 @@
     deactivateOverlay(els.sizeGuideBackdrop);
   }
 
-  function buildOrderPlainText(order) {
-    const itemsText = order.items
-      .map((i) => `- ${i.qty}x ${i.name} (Taille ${i.size}) : ${formatEuro(i.lineTotal)}`)
-      .join('\n');
-
-    const isOnline = (order.paymentMethod || '').toLowerCase().includes('en ligne');
-
-    return [
-      `🥋 REÇU DE COMMANDE — ${state.settings.clubName}`,
-      isOnline ? 'Paiement en ligne validé avec succès !' : '⚠️ Réservation enregistrée — Paiement à effectuer au club',
-      '',
-      `Référence : ${order.ref}`,
-      `Date : ${order.dateLabel}`,
-      `Adhérent : ${order.memberName}`,
-      order.memberPhone ? `Téléphone : ${order.memberPhone}` : null,
-      order.memberEmail ? `Email : ${order.memberEmail}` : null,
-      `Mode de règlement : ${order.paymentMethod}`,
-      order.paymentStatus ? `Statut : ${order.paymentStatus}` : null,
-      order.memberNote ? `Remarque : ${order.memberNote}` : null,
-      '',
-      'Articles commandés :',
-      itemsText,
-      '',
-      `TOTAL : ${formatEuro(order.total)}`,
-      isOnline
-        ? '(Payé par Carte Bancaire en ligne — Équipement à récupérer à l\'accueil du dojo)'
-        : '⚠️ ATTENTION : Vous réservez uniquement votre équipement en ligne. Le règlement de ' + formatEuro(order.total) + ' s\'effectuera directement au dojo lors de votre prochain entraînement (en Espèces ou par Carte Bancaire).'
-    ].filter(Boolean).join('\n');
-  }
-
   async function handleCheckoutSubmit(event) {
     event.preventDefault();
+    if (checkoutBusy) return;
     const { lines, totalPrice } = computeCartDetails();
-    if (lines.length === 0) return;
-
-    const formData = new FormData(els.checkoutForm);
-    const memberName = state.member
-      ? state.member.name
-      : String(formData.get('memberName') || '').trim();
-    const memberPhone = state.member
-      ? (state.member.phone || String(formData.get('memberPhone') || '').trim())
-      : String(formData.get('memberPhone') || '').trim();
-    const memberEmail = state.member ? (state.member.email || '') : '';
-    const memberNote = String(formData.get('memberNote') || '').trim();
-
-    const radioClub = document.querySelector('input[name="paymentOption"][value="club"]');
-    const isClub = radioClub && radioClub.checked;
-    const paymentMethod = isClub
-      ? 'Retrait au dojo (Réservation - Paiement sur place)'
-      : 'Paiement en ligne sécurisé par Carte Bancaire';
-    const paymentStatus = isClub ? 'À régler au club' : 'Payé en ligne (CB)';
-
-    if (!memberName) {
-      showToast('Veuillez renseigner votre nom et prénom.');
+    if (!lines.length) return;
+    if (!state.member) {
+      openAccountModal('login', 'checkout');
       return;
     }
-    if (!memberPhone) {
-      showToast('Veuillez renseigner votre numéro de téléphone.');
+    if (!state.member.phone) {
+      showToast('Complétez votre numéro de téléphone dans vos préférences.');
+      openAccountModal('profile', 'checkout');
       return;
     }
-
-    if (!isClub) {
-      if (!stripeInstance || !stripeElementsInstance || !currentPaymentIntentSecret) {
-        showToast('Chargement du module bancaire sécurisé en cours...');
-        return;
-      }
-
-      els.submitOrderBtn.disabled = true;
-      const labelSpan = document.getElementById('submit-order-btn-label');
-      if (labelSpan) labelSpan.textContent = 'Paiement en cours...';
-
-      const errorEl = document.getElementById('payment-element-message');
-      if (errorEl) {
-        errorEl.hidden = true;
-        errorEl.textContent = '';
-      }
-
-      try {
-        const { error, paymentIntent } = await stripeInstance.confirmPayment({
-          elements: stripeElementsInstance,
-          confirmParams: {
-            payment_method_data: {
-              billing_details: {
-                name: memberName,
-                email: memberEmail || undefined,
-                phone: memberPhone || undefined
-              }
-            }
-          },
-          redirect: 'if_required'
-        });
-
-        if (error) {
-          els.submitOrderBtn.disabled = false;
-          updateSubmitOrderBtnUi(totalPrice);
-          if (errorEl) {
-            errorEl.hidden = false;
-            errorEl.textContent = error.message || 'Paiement refusé par votre banque.';
-          }
-          showToast(error.message || 'Paiement refusé.');
-          return;
-        }
-
-        if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing')) {
-          const confirmRes = await fetch('/api/confirm-order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              paymentIntentId: paymentIntent.id,
-              ref: currentPaymentIntentRef,
-              memberName,
-              memberEmail,
-              memberPhone,
-              memberNote,
-              total: totalPrice,
-              items: lines.map(({ product, size, qty, lineTotal }) => ({
-                id: product.id,
-                name: product.name,
-                size,
-                qty,
-                lineTotal
-              }))
-            })
-          });
-
-          const confirmData = await confirmRes.json();
-          const finalOrder = (confirmData && confirmData.order) ? confirmData.order : {
-            ref: currentPaymentIntentRef || `CLUB-${Math.floor(1000 + Math.random() * 9000)}`,
-            createdAt: new Date().toISOString(),
-            dateLabel: new Date().toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }),
-            memberName,
-            memberEmail,
-            memberPhone,
-            paymentMethod: 'Paiement en ligne par Carte Bancaire (Stripe)',
-            paymentStatus: 'Payé en ligne (Stripe CB)',
-            memberNote,
-            total: totalPrice,
-            items: lines.map(({ product, size, qty, lineTotal }) => ({
-              id: product.id,
-              name: product.name,
-              size,
-              qty,
-              lineTotal
-            }))
-          };
-
-          if (confirmData && confirmData.stock) {
-            state.stock = normalizeStock(confirmData.stock);
-            saveJson(STORAGE_KEYS.STOCK, state.stock);
-          } else {
-            lines.forEach((item) => {
-              if (state.stock[item.id] && typeof state.stock[item.id][item.size] === 'number') {
-                state.stock[item.id][item.size] = Math.max(0, state.stock[item.id][item.size] - item.qty);
-              }
-            });
-            saveJson(STORAGE_KEYS.STOCK, state.stock);
-          }
-
-          els.submitOrderBtn.disabled = false;
-          updateSubmitOrderBtnUi(totalPrice);
-
-          state.orders.unshift(finalOrder);
-          if (state.member) { state.memberOrders.unshift(finalOrder); }
-          saveJson(STORAGE_KEYS.ORDERS, state.orders);
-          state.lastOrder = finalOrder;
-          state.cart = [];
-          saveJson(STORAGE_KEYS.CART, []);
-          els.checkoutForm.reset();
-
-          stripePaymentElement = null;
-          stripeElementsInstance = null;
-          currentPaymentIntentSecret = null;
-          mountedTotal = 0;
-
-          displayOrderConfirmation(finalOrder);
-          renderProducts();
-          renderCart();
-          showToast('Paiement réussi ! Merci pour votre commande.');
-          return;
-        }
-      } catch (err) {
-        els.submitOrderBtn.disabled = false;
-        updateSubmitOrderBtnUi(totalPrice);
-        showToast('Erreur lors du traitement bancaire.');
-        return;
-      }
+    let paidIntentId = pendingPaymentId();
+    const isClub =
+      !paidIntentId &&
+      document.querySelector('input[name="paymentOption"][value="club"]').checked;
+    const errorEl = document.getElementById('payment-element-message');
+    if (errorEl) {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
     }
-
-    const now = new Date();
-    const randomCode = Math.floor(1000 + Math.random() * 9000);
-    const order = {
-      ref: `CLUB-${randomCode}`,
-      createdAt: now.toISOString(),
-      dateLabel: now.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }),
-      memberName,
-      memberEmail,
-      memberPhone,
-      paymentMethod,
-      paymentStatus,
-      memberNote,
-      total: totalPrice,
-      items: lines.map(({ product, size, qty, lineTotal }) => ({
-        id: product.id,
-        name: product.name,
-        size,
-        qty,
-        lineTotal
-      }))
-    };
-
+    checkoutBusy = true;
     els.submitOrderBtn.disabled = true;
-    els.submitOrderBtn.textContent = 'Enregistrement de la réservation...';
-
-    let serverSyncedStock = false;
-
-    if (window.location.protocol.startsWith('http')) {
-      try {
-        const res = await fetch('/api/orders', {
+    const label = document.getElementById('submit-order-btn-label');
+    label.textContent = isClub
+      ? 'Enregistrement de la réservation...'
+      : 'Paiement en cours...';
+    try {
+      let response;
+      if (isClub) {
+        if (!reservationRequestId) reservationRequestId = crypto.randomUUID();
+        response = await fetch('/api/orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            ...order,
-            clubName: state.settings.clubName,
-            memberId: state.member ? state.member.id : null
-          })
+            requestId: reservationRequestId,
+            items: lines.map(({ product, size, qty }) => ({
+              id: product.id,
+              size,
+              qty,
+            })),
+            paymentMethod: 'Retrait au dojo (Réservation - Paiement sur place)',
+          }),
         });
-        const data = await res.json();
-        if (res.status === 409) {
-          if (data.stock) {
-            state.stock = normalizeStock(data.stock);
-            saveJson(STORAGE_KEYS.STOCK, state.stock);
-            renderProducts();
+      } else {
+        if (!paidIntentId) {
+          if (!stripeElementsInstance || mountedCartKey !== paymentCartKey())
+            throw new Error(
+              'Le formulaire de paiement doit être rechargé. Réessayez dans un instant.',
+            );
+          const { error, paymentIntent } = await stripeInstance.confirmPayment({
+            elements: stripeElementsInstance,
+            confirmParams: {
+              return_url: window.location.origin + window.location.pathname,
+              payment_method_data: {
+                billing_details: {
+                  name: state.member.name,
+                  email: state.member.email,
+                  phone: state.member.phone,
+                },
+              },
+            },
+            redirect: 'if_required',
+          });
+          if (error) throw new Error(error.message || 'Paiement refusé.');
+          if (paymentIntent?.status === 'processing') rememberPendingPayment(paymentIntent.id);
+          if (!paymentIntent || paymentIntent.status !== 'succeeded') {
+            throw new Error(
+              paymentIntent?.status === 'processing'
+                ? 'Votre banque traite encore le paiement. La confirmation sera envoyée après validation.'
+                : 'Le paiement n’est pas confirmé. Votre panier est conservé.',
+            );
           }
-          els.submitOrderBtn.disabled = false;
-          updateSubmitOrderBtnUi(totalPrice);
-          showToast(data.error || 'Stock insuffisant.');
-          return;
+          paidIntentId = paymentIntent.id;
+          rememberPendingPayment(paidIntentId);
         }
-        if (res.ok) {
-          if (data.stock) {
-            state.stock = normalizeStock(data.stock);
-            saveJson(STORAGE_KEYS.STOCK, state.stock);
-            serverSyncedStock = true;
-          }
-        }
-      } catch {
-        // Fallback offline
+        response = await fetch('/api/confirm-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentIntentId: paidIntentId }),
+        });
       }
-    }
-
-    if (!serverSyncedStock) {
-      order.items.forEach((item) => {
-        if (state.stock[item.id] && typeof state.stock[item.id][item.size] === 'number') {
-          state.stock[item.id][item.size] = Math.max(0, state.stock[item.id][item.size] - item.qty);
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        if (['canceled', 'requires_payment_method'].includes(data.paymentStatus)) {
+          rememberPendingPayment(null);
+          resetStripePayment();
+          initStripePaymentElement();
         }
-      });
-      saveJson(STORAGE_KEYS.STOCK, state.stock);
+        if (data.stock) {
+          state.stock = normalizeStock(data.stock, state.products);
+          saveJson(STORAGE_KEYS.STOCK, state.stock);
+          renderProducts();
+        }
+        if (response.status === 401) {
+          state.member = null;
+          updateMemberUi();
+          resetStripePayment();
+        }
+        throw new Error(
+          data.error || 'La commande n’a pas été enregistrée. Votre panier est conservé.',
+        );
+      }
+      completeOrder(data);
+      reservationRequestId = null;
+      showToast(
+        isClub ? 'Réservation enregistrée.' : 'Paiement confirmé. Merci pour votre commande.',
+      );
+    } catch (error) {
+      const message =
+        error.message === 'Failed to fetch'
+          ? 'Connexion interrompue. Votre panier est conservé ; réessayez.'
+          : error.message;
+      if (errorEl && !isClub) {
+        errorEl.textContent = message;
+        errorEl.hidden = false;
+      }
+      showToast(message);
+    } finally {
+      checkoutBusy = false;
+      els.submitOrderBtn.disabled = false;
+      updateSubmitOrderBtnUi(totalPrice);
     }
-
-    els.submitOrderBtn.disabled = false;
-    updateSubmitOrderBtnUi(totalPrice);
-
-    state.orders.unshift(order);
-    if (state.member) { state.memberOrders.unshift(order); }
-    saveJson(STORAGE_KEYS.ORDERS, state.orders);
-    state.lastOrder = order;
-    state.cart = [];
-    saveJson(STORAGE_KEYS.CART, []);
-    els.checkoutForm.reset();
-
-    displayOrderConfirmation(state.lastOrder);
-    renderProducts();
-    renderCart();
   }
 
   function updateSubmitOrderBtnUi(totalPrice) {
@@ -1338,21 +1352,21 @@
     const isClub = radioClub && radioClub.checked;
     const labelSpan = document.getElementById('submit-order-btn-label');
     const badgeSpan = document.getElementById('submit-order-price-badge');
-    if (labelSpan) labelSpan.textContent = isClub ? 'Confirmer la commande' : 'Valider et Payer';
+    if (labelSpan)
+      labelSpan.textContent = isClub ? 'Confirmer la commande' : 'Valider et Payer';
     if (badgeSpan) badgeSpan.textContent = formatEuro(totalPrice);
   }
 
   function displayOrderConfirmation(order) {
-    const text = buildOrderPlainText(order);
     if (els.confirmOrderRef) {
       els.confirmOrderRef.textContent = `Réf. ${order.ref}`;
     }
-    if (els.confirmSummaryCard) {
-      els.confirmSummaryCard.textContent = text;
-    }
 
     const isClub = (order.paymentMethod || '').toLowerCase().includes('retrait');
-    const noticeEl = els.confirmNotice || document.getElementById('confirm-notice') || document.querySelector('.confirm-notice');
+    const noticeEl =
+      els.confirmNotice ||
+      document.getElementById('confirm-notice') ||
+      document.querySelector('.confirm-notice');
     if (noticeEl) {
       if (isClub) {
         noticeEl.className = 'confirm-notice is-reservation';
@@ -1366,16 +1380,20 @@
     if (els.confirmOrderCard) {
       els.confirmOrderCard.innerHTML = `
         <div class="confirm-items-list">
-          ${order.items.map((it) => `
+          ${order.items
+            .map(
+              (it) => `
             <div class="confirm-item-row">
               ${it.image ? `<img src="${it.image}" alt="${escapeHtml(it.name)}" class="confirm-item-thumb" onerror="this.style.display='none'" />` : ''}
               <div class="confirm-item-info">
                 <p class="confirm-item-name">${escapeHtml(it.name)}</p>
                 <div class="confirm-item-meta">Taille <strong>${escapeHtml(it.size)}</strong> · Qté ${it.qty}</div>
               </div>
-              <div class="confirm-item-price">${formatEuro(it.lineTotal || (it.price * it.qty))}</div>
+              <div class="confirm-item-price">${formatEuro(it.lineTotal || it.price * it.qty)}</div>
             </div>
-          `).join('')}
+          `,
+            )
+            .join('')}
         </div>
         <div class="confirm-meta-details">
           <div class="confirm-meta-line"><span>Adhérent :</span><strong>${escapeHtml(order.memberName || 'Client')}</strong></div>
@@ -1387,14 +1405,6 @@
           <span class="confirm-total-val">${formatEuro(order.total)}</span>
         </div>
       `;
-    }
-
-    const encodedText = encodeURIComponent(text);
-    const cleanPhone = (state.settings.whatsapp || '').replace(/\D/g, '');
-    if (els.sendWhatsappBtn) {
-      els.sendWhatsappBtn.href = cleanPhone
-        ? `https://wa.me/${cleanPhone}?text=${encodedText}`
-        : `https://wa.me/?text=${encodedText}`;
     }
 
     // Déclenchement de l'animation de célébration fluide
@@ -1435,7 +1445,6 @@
     }
   }
 
-  
   /* ==========================================================================
      GESTION DU COMPTE ADHÉRENT (FRONTEND)
      ========================================================================== */
@@ -1463,8 +1472,10 @@
       if (els.profName) els.profName.value = state.member.name || '';
       if (els.profEmail) els.profEmail.value = state.member.email || '';
       if (els.profPhone) els.profPhone.value = state.member.phone || '';
-      if (els.profRashguardSize) els.profRashguardSize.value = state.member.favoriteRashguardSize || '';
-      if (els.profGlovesSize) els.profGlovesSize.value = state.member.favoriteGlovesSize || '';
+      if (els.profRashguardSize)
+        els.profRashguardSize.value = state.member.favoriteRashguardSize || '';
+      if (els.profGlovesSize)
+        els.profGlovesSize.value = state.member.favoriteGlovesSize || '';
 
       // Synchronisation avec les champs de commande
       const nameInput = document.getElementById('member-name');
@@ -1483,8 +1494,10 @@
       if (els.checkoutAuthRequiredBox) els.checkoutAuthRequiredBox.hidden = true;
       if (els.checkoutPaymentSection) els.checkoutPaymentSection.hidden = false;
       if (els.checkoutMemberAvatar) els.checkoutMemberAvatar.textContent = initials;
-      if (els.checkoutMemberNameLabel) els.checkoutMemberNameLabel.textContent = state.member.name;
-      if (els.checkoutMemberPhoneLabel) els.checkoutMemberPhoneLabel.textContent = `📱 ${state.member.phone || 'Adhérent Club'}`;
+      if (els.checkoutMemberNameLabel)
+        els.checkoutMemberNameLabel.textContent = state.member.name;
+      if (els.checkoutMemberPhoneLabel)
+        els.checkoutMemberPhoneLabel.textContent = `📱 ${state.member.phone || 'Adhérent Club'}`;
     } else {
       els.accountBtn.classList.remove('is-logged');
       els.accountBtnLabel.textContent = 'Espace Adhérent';
@@ -1499,56 +1512,33 @@
       if (nameInput) nameInput.value = '';
       if (phoneInput) phoneInput.value = '';
     }
-    renderCartMemberBanner();
-  }
-
-  function renderCartMemberBanner() {
-    if (!els.cartMemberBanner) return;
-    if (state.member) {
-      els.cartMemberBanner.innerHTML = `
-        <div class="cart-member-box">
-          <div class="cart-member-info">
-            <span class="cart-member-tag">Adhérent connecté</span>
-            <span class="cart-member-name">${escapeHtml(state.member.name)}</span>
-            <span class="cart-member-sub">${escapeHtml(state.member.email)}</span>
-          </div>
-          <button type="button" class="btn-text-link" id="cart-member-account-btn">Gérer mon compte</button>
-        </div>
-      `;
-      const btn = document.getElementById('cart-member-account-btn');
-      if (btn) btn.onclick = () => openAccountModal('orders');
-    } else {
-      els.cartMemberBanner.innerHTML = `
-        <div class="cart-member-box is-guest">
-          <div class="cart-member-info">
-            <span class="cart-member-name">Vous êtes adhérent du club ?</span>
-            <span class="cart-member-sub">Connectez-vous pour pré-remplir vos coordonnées et suivre vos commandes.</span>
-          </div>
-          <button type="button" class="btn-text-link" id="cart-quick-login-btn">Se connecter</button>
-        </div>
-      `;
-      const btn = document.getElementById('cart-quick-login-btn');
-      if (btn) btn.onclick = () => openAccountModal('login');
-    }
   }
 
   function applyMemberPreferences() {
     if (!state.member) return;
     if (state.member.favoriteRashguardSize) {
       state.products.forEach((p) => {
-        if (p.category === 'rashguard' && Array.isArray(p.sizes) && p.sizes.includes(state.member.favoriteRashguardSize)) {
+        if (
+          p.category === 'rashguard' &&
+          Array.isArray(p.sizes) &&
+          p.sizes.includes(state.member.favoriteRashguardSize)
+        ) {
           state.selectedSizes[p.id] = state.member.favoriteRashguardSize;
         }
       });
     }
     if (state.member.favoriteGlovesSize) {
       state.products.forEach((p) => {
-        if (p.category === 'gants' && Array.isArray(p.sizes) && p.sizes.includes(state.member.favoriteGlovesSize)) {
+        if (
+          p.category === 'gants' &&
+          Array.isArray(p.sizes) &&
+          p.sizes.includes(state.member.favoriteGlovesSize)
+        ) {
           state.selectedSizes[p.id] = state.member.favoriteGlovesSize;
         }
       });
     }
-    renderProducts();
+    state.products.forEach((product) => updateProductSelection(product.id));
   }
 
   function renderMemberOrders() {
@@ -1582,12 +1572,15 @@
       </div>
     `;
 
-    const ordersHtml = state.memberOrders.map((order) => {
-      const isOnline = (order.paymentMethod || '').toLowerCase().includes('en ligne');
-      const statusLabel = isOnline ? '✓ Payé CB (En ligne)' : '⚠️ Réservation (À régler au dojo)';
-      const statusClass = isOnline ? 'is-paid' : 'is-reserved';
+    const ordersHtml = state.memberOrders
+      .map((order) => {
+        const isOnline = (order.paymentMethod || '').toLowerCase().includes('en ligne');
+        const statusLabel = isOnline
+          ? '✓ Payé CB (En ligne)'
+          : '⚠️ Réservation (À régler au dojo)';
+        const statusClass = isOnline ? 'is-paid' : 'is-reserved';
 
-      return `
+        return `
         <div class="member-order-card">
           <div class="member-order-header">
             <div>
@@ -1598,14 +1591,18 @@
           </div>
 
           <div class="member-order-items-list">
-            ${(order.items || []).map((it) => `
+            ${(order.items || [])
+              .map(
+                (it) => `
               <div class="member-order-item-row">
                 <span class="item-name">${escapeHtml(it.name)}</span>
                 <span class="item-size-pill">Taille ${escapeHtml(it.size)}</span>
                 <span class="item-qty">Qté ${it.qty}</span>
-                <strong class="item-price">${formatEuro(it.lineTotal || (it.price * it.qty))}</strong>
+                <strong class="item-price">${formatEuro(it.lineTotal || it.price * it.qty)}</strong>
               </div>
-            `).join('')}
+            `,
+              )
+              .join('')}
           </div>
 
           <div class="member-order-footer">
@@ -1620,7 +1617,8 @@
           </div>
         </div>
       `;
-    }).join('');
+      })
+      .join('');
 
     els.memberOrdersContainer.innerHTML = headerNotice + ordersHtml;
   }
@@ -1629,9 +1627,16 @@
     if (!order) return;
     const isOnline = (order.paymentMethod || '').toLowerCase().includes('en ligne');
     const clubName = state.settings.clubName || 'DORAGON DOJO CLUB';
-    const dateFormatted = order.dateLabel || new Date(order.createdAt || Date.now()).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+    const dateFormatted =
+      order.dateLabel ||
+      new Date(order.createdAt || Date.now()).toLocaleString('fr-FR', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      });
 
-    const rowsHtml = (order.items || []).map((i) => `
+    const rowsHtml = (order.items || [])
+      .map(
+        (i) => `
       <tr>
         <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-weight:600;color:#111827;">${escapeHtml(i.name)}</td>
         <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;font-weight:700;color:#071326;">${escapeHtml(i.size)}</td>
@@ -1639,7 +1644,9 @@
         <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;color:#374151;">${formatEuro(i.lineTotal / (i.qty || 1))}</td>
         <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:#111827;">${formatEuro(i.lineTotal)}</td>
       </tr>
-    `).join('');
+    `,
+      )
+      .join('');
 
     const statusBadgeHtml = isOnline
       ? `<div style="display:inline-block;padding:6px 14px;background:#dcfce7;color:#15803d;border:1.5px solid #86efac;border-radius:999px;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">✓ Payé en ligne par Carte Bancaire</div>`
@@ -1806,24 +1813,19 @@
   }
 
   async function checkMemberSession() {
-    if (!window.location.protocol.startsWith('http')) return;
     try {
       const res = await fetch('/api/member/me');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.authenticated && data.user) {
-          state.member = data.user;
-          state.memberOrders = Array.isArray(data.orders) ? data.orders : [];
-          updateMemberUi();
-          applyMemberPreferences();
-        } else {
-          state.member = null;
-          state.memberOrders = [];
-          updateMemberUi();
-        }
-      }
+      if (!res.ok) return;
+      const data = await res.json();
+      const previous = state.member?.id;
+      state.member = data.authenticated && data.user ? data.user : null;
+      state.memberOrders = state.member && Array.isArray(data.orders) ? data.orders : [];
+      saveJson(STORAGE_KEYS.MEMBER, state.member);
+      if (previous !== state.member?.id) resetStripePayment();
+      updateMemberUi();
+      applyMemberPreferences();
     } catch {
-      // Offline fallback
+      /* Le catalogue et le panier restent consultables hors connexion. */
     }
   }
 
@@ -1842,7 +1844,7 @@
       const res = await fetch('/api/member/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
       });
       const data = await res.json().catch(() => ({}));
       btn.disabled = false;
@@ -1904,15 +1906,16 @@
           phone,
           password,
           favoriteRashguardSize,
-          favoriteGlovesSize
-        })
+          favoriteGlovesSize,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       btn.disabled = false;
       btn.textContent = 'Créer mon compte';
 
       if (!res.ok || !data.ok) {
-        els.registerErrorMsg.textContent = data.error || 'Erreur lors de la création du compte.';
+        els.registerErrorMsg.textContent =
+          data.error || 'Erreur lors de la création du compte.';
         els.registerErrorMsg.hidden = false;
         return;
       }
@@ -1950,7 +1953,10 @@
     }
     state.member = null;
     state.memberOrders = [];
-    try { localStorage.removeItem(STORAGE_KEYS.MEMBER); } catch {}
+    resetStripePayment();
+    try {
+      localStorage.removeItem(STORAGE_KEYS.MEMBER);
+    } catch {}
     updateMemberUi();
     showToast('Vous avez été déconnecté.');
     closeAccountModal();
@@ -1973,14 +1979,19 @@
       const res = await fetch('/api/member/update-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, favoriteRashguardSize, favoriteGlovesSize })
+        body: JSON.stringify({
+          name,
+          phone,
+          favoriteRashguardSize,
+          favoriteGlovesSize,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       btn.disabled = false;
       btn.textContent = 'Enregistrer mes préférences';
 
       if (!res.ok || !data.ok) {
-        els.profileErrorMsg.textContent = data.error || 'Impossible d\'enregistrer.';
+        els.profileErrorMsg.textContent = data.error || "Impossible d'enregistrer.";
         els.profileErrorMsg.hidden = false;
         return;
       }
@@ -2004,22 +2015,32 @@
     els.enterShopBtn.addEventListener('click', () => enterShop('all'));
 
     if (els.accountBtn) els.accountBtn.addEventListener('click', () => openAccountModal());
-    if (els.closeAccountModalBtn) els.closeAccountModalBtn.addEventListener('click', closeAccountModal);
+    if (els.closeAccountModalBtn)
+      els.closeAccountModalBtn.addEventListener('click', closeAccountModal);
     if (els.accountModalBackdrop) {
       els.accountModalBackdrop.addEventListener('click', (e) => {
         if (e.target === els.accountModalBackdrop) closeAccountModal();
       });
     }
-    if (els.tabLoginBtn) els.tabLoginBtn.addEventListener('click', () => switchGuestTab('login'));
-    if (els.tabRegisterBtn) els.tabRegisterBtn.addEventListener('click', () => switchGuestTab('register'));
-    if (els.switchToRegisterBtn) els.switchToRegisterBtn.addEventListener('click', () => switchGuestTab('register'));
-    if (els.switchToLoginBtn) els.switchToLoginBtn.addEventListener('click', () => switchGuestTab('login'));
-    if (els.tabMemberOrdersBtn) els.tabMemberOrdersBtn.addEventListener('click', () => switchLoggedTab('orders'));
-    if (els.tabMemberProfileBtn) els.tabMemberProfileBtn.addEventListener('click', () => switchLoggedTab('profile'));
-    if (els.memberLoginForm) els.memberLoginForm.addEventListener('submit', handleMemberLogin);
-    if (els.memberRegisterForm) els.memberRegisterForm.addEventListener('submit', handleMemberRegister);
+    if (els.tabLoginBtn)
+      els.tabLoginBtn.addEventListener('click', () => switchGuestTab('login'));
+    if (els.tabRegisterBtn)
+      els.tabRegisterBtn.addEventListener('click', () => switchGuestTab('register'));
+    if (els.switchToRegisterBtn)
+      els.switchToRegisterBtn.addEventListener('click', () => switchGuestTab('register'));
+    if (els.switchToLoginBtn)
+      els.switchToLoginBtn.addEventListener('click', () => switchGuestTab('login'));
+    if (els.tabMemberOrdersBtn)
+      els.tabMemberOrdersBtn.addEventListener('click', () => switchLoggedTab('orders'));
+    if (els.tabMemberProfileBtn)
+      els.tabMemberProfileBtn.addEventListener('click', () => switchLoggedTab('profile'));
+    if (els.memberLoginForm)
+      els.memberLoginForm.addEventListener('submit', handleMemberLogin);
+    if (els.memberRegisterForm)
+      els.memberRegisterForm.addEventListener('submit', handleMemberRegister);
     if (els.btnLogout) els.btnLogout.addEventListener('click', handleMemberLogout);
-    if (els.memberProfileForm) els.memberProfileForm.addEventListener('submit', handleMemberProfileUpdate);
+    if (els.memberProfileForm)
+      els.memberProfileForm.addEventListener('submit', handleMemberProfileUpdate);
 
     els.brandHomeBtn.addEventListener('click', showLanding);
 
@@ -2086,13 +2107,19 @@
     }
 
     if (els.btnSwitchAccountCheckout) {
-      els.btnSwitchAccountCheckout.addEventListener('click', () => openAccountModal('profile', 'checkout'));
+      els.btnSwitchAccountCheckout.addEventListener('click', () =>
+        openAccountModal('profile', 'checkout'),
+      );
     }
     if (els.btnCheckoutLogin) {
-      els.btnCheckoutLogin.addEventListener('click', () => openAccountModal('login', 'checkout'));
+      els.btnCheckoutLogin.addEventListener('click', () =>
+        openAccountModal('login', 'checkout'),
+      );
     }
     if (els.btnCheckoutRegister) {
-      els.btnCheckoutRegister.addEventListener('click', () => openAccountModal('register', 'checkout'));
+      els.btnCheckoutRegister.addEventListener('click', () =>
+        openAccountModal('register', 'checkout'),
+      );
     }
 
     els.checkoutForm.addEventListener('submit', handleCheckoutSubmit);
@@ -2114,7 +2141,9 @@
         if (panelOnline) panelOnline.hidden = false;
         if (panelClub) panelClub.hidden = true;
         if (btnLabel) btnLabel.textContent = 'Payer en ligne';
-        if (reassuranceText) reassuranceText.textContent = 'Paiement par carte bancaire sécurisé. Vos équipements sont préparés au dojo.';
+        if (reassuranceText)
+          reassuranceText.textContent =
+            'Paiement par carte bancaire sécurisé. Vos équipements sont préparés au dojo.';
         initStripePaymentElement();
       } else {
         if (labelClub) labelClub.classList.add('is-active');
@@ -2122,52 +2151,15 @@
         if (panelOnline) panelOnline.hidden = true;
         if (panelClub) panelClub.hidden = false;
         if (btnLabel) btnLabel.textContent = 'Réserver mon équipement';
-        if (reassuranceText) reassuranceText.textContent = '⚠️ Attention : Vous réservez uniquement votre équipement. Le paiement intégral se fera sur place au club.';
+        if (reassuranceText)
+          reassuranceText.textContent =
+            '⚠️ Attention : Vous réservez uniquement votre équipement. Le paiement intégral se fera sur place au club.';
       }
     }
 
     if (radioOnline && radioClub) {
       radioOnline.addEventListener('change', () => updatePaymentOptionView('online'));
       radioClub.addEventListener('change', () => updatePaymentOptionView('club'));
-    }
-
-    // Formatage automatique carte bancaire
-    const cardNumInput = document.getElementById('card-number');
-    if (cardNumInput) {
-      cardNumInput.addEventListener('input', (e) => {
-        let val = e.target.value.replace(/\D/g, '').slice(0, 16);
-        val = val.replace(/(\d{4})(?=\d)/g, '$1 ');
-        e.target.value = val;
-      });
-    }
-
-    const cardExpInput = document.getElementById('card-expiry');
-    if (cardExpInput) {
-      cardExpInput.addEventListener('input', (e) => {
-        let val = e.target.value.replace(/\D/g, '').slice(0, 4);
-        if (val.length >= 2) val = val.slice(0, 2) + '/' + val.slice(2);
-        e.target.value = val;
-      });
-    }
-
-    const cardCvcInput = document.getElementById('card-cvc');
-    if (cardCvcInput) {
-      cardCvcInput.addEventListener('input', (e) => {
-        e.target.value = e.target.value.replace(/\D/g, '').slice(0, 3);
-      });
-    }
-
-    if (els.copyOrderBtn) {
-      els.copyOrderBtn.addEventListener('click', async () => {
-        if (!state.lastOrder) return;
-        const text = buildOrderPlainText(state.lastOrder);
-        try {
-          await navigator.clipboard.writeText(text);
-          showToast('Commande copiée');
-        } catch {
-          showToast('Copie impossible automatiquement');
-        }
-      });
     }
 
     els.printOrderBtn.addEventListener('click', () => {
@@ -2183,7 +2175,9 @@
         const btn = e.target.closest('.btn-receipt-pdf');
         if (!btn) return;
         const ref = btn.dataset.orderRef;
-        const found = (state.memberOrders || []).find((o) => o.ref === ref) || (state.orders || []).find((o) => o.ref === ref);
+        const found =
+          (state.memberOrders || []).find((o) => o.ref === ref) ||
+          (state.orders || []).find((o) => o.ref === ref);
         if (found) {
           generateReceiptPdf(found);
         } else {
@@ -2216,13 +2210,29 @@
         e.preventDefault();
         closeTopOverlay();
       } else if (e.key === 'Tab') {
-        const controls = [...active.querySelectorAll('button, a[href], input, select, textarea, [tabindex="0"]')]
-          .filter((el) => !el.disabled && !el.closest('[inert]') && el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden');
-        const first = controls[0], last = controls[controls.length - 1];
-        if (e.shiftKey && (!controls.includes(document.activeElement) || document.activeElement === first)) {
+        const controls = [
+          ...active.querySelectorAll(
+            'button, a[href], input, select, textarea, [tabindex="0"]',
+          ),
+        ].filter(
+          (el) =>
+            !el.disabled &&
+            !el.closest('[inert]') &&
+            el.getClientRects().length &&
+            getComputedStyle(el).visibility !== 'hidden',
+        );
+        const first = controls[0],
+          last = controls[controls.length - 1];
+        if (
+          e.shiftKey &&
+          (!controls.includes(document.activeElement) || document.activeElement === first)
+        ) {
           e.preventDefault();
           if (last) last.focus();
-        } else if (!e.shiftKey && (!controls.includes(document.activeElement) || document.activeElement === last)) {
+        } else if (
+          !e.shiftKey &&
+          (!controls.includes(document.activeElement) || document.activeElement === last)
+        ) {
           e.preventDefault();
           if (first) first.focus();
         }
@@ -2235,7 +2245,7 @@
     try {
       const [prodRes, stockRes] = await Promise.all([
         fetch('/api/products'),
-        fetch('/api/stock')
+        fetch('/api/stock'),
       ]);
       if (prodRes.ok) {
         const prodData = await prodRes.json();
@@ -2244,7 +2254,8 @@
           saveJson(STORAGE_KEYS.PRODUCTS, state.products);
           state.products.forEach((p) => {
             if (!state.selectedSizes[p.id]) {
-              state.selectedSizes[p.id] = p.defaultSize || (p.sizes && p.sizes[0]) || 'Unique';
+              state.selectedSizes[p.id] =
+                p.defaultSize || (p.sizes && p.sizes[0]) || 'Unique';
             }
           });
         }
@@ -2264,90 +2275,86 @@
   }
 
   async function checkStripePaymentReturn() {
-    const params = new URLSearchParams(window.location.search);
-    const paymentStatus = params.get('payment');
-    const sessionId = params.get('session_id');
-
-    if (paymentStatus === 'cancelled') {
+    const params = new URLSearchParams(location.search);
+    const intentId = params.get('payment_intent') || pendingPaymentId(),
+      sessionId = params.get('session_id');
+    if (params.get('payment') === 'cancelled') {
       showToast('Paiement annulé. Votre panier est conservé.');
-      window.history.replaceState({}, document.title, window.location.pathname);
+      enterShop();
       openCartDrawer();
+    }
+    if (!intentId && !sessionId) {
+      if (params.get('payment') === 'cancelled')
+        history.replaceState({}, document.title, location.pathname + location.hash);
       return;
     }
-
-    if (paymentStatus === 'success' && sessionId) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-      showToast('Paiement reçu ! Confirmation de votre commande en cours...');
-
-      try {
-        const res = await fetch(`/api/verify-checkout-session?session_id=${encodeURIComponent(sessionId)}`);
-        const data = await res.json();
-
-        if (res.ok && data.ok && data.order) {
-          state.cart = [];
-          saveJson(STORAGE_KEYS.CART, []);
-          renderCart();
-
-          state.orders.unshift(data.order);
-          if (state.member) {
-            state.memberOrders.unshift(data.order);
-          }
-          saveJson(STORAGE_KEYS.ORDERS, state.orders);
-          state.lastOrder = data.order;
-
-          if (data.stock) {
-            state.stock = normalizeStock(data.stock, state.products);
-            saveJson(STORAGE_KEYS.STOCK, state.stock);
-            renderProducts();
-          }
-
-          displayOrderConfirmation(data.order);
-          openCartDrawer();
-          showToast('Commande confirmée avec succès ! Reçu envoyé par email.');
-        } else {
-          showToast(data.error || 'Erreur lors de la validation du paiement Stripe.');
-        }
-      } catch (err) {
-        showToast('Erreur réseau lors de la validation du paiement.');
-      }
-    }
-  }
-
-  async function prewarmStripe() {
     try {
-      const res = await fetch('/api/stripe-config');
-      const data = await res.json();
-      if (data && data.ok && data.publishableKey) {
-        stripePublishableKey = data.publishableKey;
-        if (typeof window.Stripe === 'function') {
-          stripeInstance = window.Stripe(data.publishableKey);
-        }
+      if (intentId && ['succeeded', 'processing'].includes(params.get('redirect_status')))
+        rememberPendingPayment(intentId);
+      const response = intentId
+        ? await fetch('/api/confirm-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentIntentId: intentId }),
+          })
+        : await fetch(
+            '/api/verify-checkout-session?session_id=' + encodeURIComponent(sessionId),
+          );
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        if (['canceled', 'requires_payment_method'].includes(data.paymentStatus)) rememberPendingPayment(null);
+        throw new Error(data.error || 'Paiement en attente de confirmation.');
       }
-    } catch (_) {}
+      completeOrder(data);
+      enterShop();
+      openCartDrawer();
+      showToast('Commande confirmée.');
+    } catch (error) {
+      showToast(
+        error.message ||
+          'Impossible de vérifier le paiement. Réessayez depuis votre espace adhérent.',
+      );
+    } finally {
+      for (const key of [
+        'payment_intent',
+        'payment_intent_client_secret',
+        'redirect_status',
+        'payment',
+        'session_id',
+      ])
+        params.delete(key);
+      history.replaceState(
+        {},
+        document.title,
+        location.pathname + (params.size ? '?' + params.toString() : '') + location.hash,
+      );
+    }
   }
 
   function init() {
     applySettingsToUi();
-    prewarmStripe();
-    if (state.member) {
-      updateMemberUi();
-      applyMemberPreferences();
-      fetch(`/api/member/orders?email=${encodeURIComponent(state.member.email)}`)
-        .then((r) => r.json())
-        .then((data) => {
-          if (data && Array.isArray(data.orders)) {
-            state.memberOrders = data.orders;
-            renderMemberOrders();
-          }
-        })
-        .catch(() => {});
-    }
+    if (
+      state.member &&
+      (typeof state.member.name !== 'string' || typeof state.member.email !== 'string')
+    )
+      state.member = null;
+    state.cart = state.cart.filter(
+      (item) =>
+        item &&
+        typeof item.productId === 'string' &&
+        typeof item.size === 'string' &&
+        Number.isSafeInteger(item.qty) &&
+        item.qty > 0 &&
+        item.qty <= 999,
+    );
+    updateMemberUi();
     renderProducts();
     renderCart();
     bindEvents();
     syncOverlayState();
-    syncCatalogAndStockFromServer();
-    checkStripePaymentReturn();
+    Promise.all([syncCatalogAndStockFromServer(), checkMemberSession()]).then(
+      checkStripePaymentReturn,
+    );
   }
 
   init();

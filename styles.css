@@ -44,8 +44,7 @@ body {
   background-color: var(--bg-page);
   background:
     radial-gradient(circle at 50% 0%, rgba(26, 68, 153, 0.3) 0%, transparent 60%),
-    radial-gradient(circle at 85% 70%, rgba(14, 45, 107, 0.25) 0%, transparent 50%),
-    #071326;
+    radial-gradient(circle at 85% 70%, rgba(14, 45, 107, 0.25) 0%, transparent 50%), #071326;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
@@ -104,7 +103,9 @@ body.is-landing .site-footer {
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border-subtle);
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease;
 }
 
 body.drawer-open .site-header,
@@ -166,31 +167,6 @@ body.modal-open .site-header {
   color: var(--club-gold);
 }
 
-.main-nav {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.nav-link-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  border: none;
-  background: transparent;
-  padding: 0.35rem 0.2rem;
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--ink-secondary);
-  cursor: pointer;
-  transition: color 0.15s ease;
-}
-
-.nav-link-btn:hover,
-.nav-link-btn.is-active {
-  color: #ffffff;
-}
-
 .cart-trigger {
   display: inline-flex;
   align-items: center;
@@ -211,7 +187,6 @@ body.modal-open .site-header {
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.3);
   transform: translateY(-1px);
-}
 }
 
 .cart-trigger:active {
@@ -289,7 +264,12 @@ body.modal-open .site-header {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(110deg, transparent 20%, rgba(255, 255, 255, 0.48) 50%, transparent 80%);
+  background: linear-gradient(
+    110deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.48) 50%,
+    transparent 80%
+  );
   transform: translateX(-100%);
   animation: glassSheen 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   pointer-events: none;
@@ -340,26 +320,6 @@ body.modal-open .site-header {
 .btn-ghost:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
-}
-
-.btn-whatsapp {
-  background: var(--whatsapp);
-  color: #ffffff;
-}
-
-.btn-whatsapp:hover:not(:disabled) {
-  background: var(--whatsapp-hover);
-}
-
-.btn-link {
-  background: transparent;
-  color: var(--club-gold);
-  padding: 0.45rem;
-  font-size: 0.88rem;
-}
-
-.btn-link:hover {
-  text-decoration: underline;
 }
 
 /* Vue 1 : Accueil épuré - Fond Bleu Dragon Nuit & Couleurs Inversées Proprement */
@@ -435,7 +395,9 @@ body.modal-open .site-header {
   letter-spacing: -0.01em;
   margin: 0 0 1.85rem;
   color: #ffffff;
-  text-shadow: 0 2px 24px rgba(255, 255, 255, 0.2), 0 8px 30px rgba(0, 0, 0, 0.5);
+  text-shadow:
+    0 2px 24px rgba(255, 255, 255, 0.2),
+    0 8px 30px rgba(0, 0, 0, 0.5);
 }
 
 .btn-enter {
@@ -594,18 +556,6 @@ body.modal-open .site-header {
   transform: scale(1.03);
 }
 
-.product-badge {
-  position: absolute;
-  top: 0.85rem;
-  left: 0.85rem;
-  padding: 0.28rem 0.72rem;
-  border-radius: 999px;
-  background: rgba(13, 21, 38, 0.86);
-  color: #ffffff;
-  font-size: 0.74rem;
-  font-weight: 600;
-}
-
 .product-body {
   padding: 1.3rem;
   display: flex;
@@ -705,8 +655,6 @@ body.modal-open .site-header {
 
 .stock-note.is-out {
   color: #f87171;
-}
-  color: var(--club-red);
 }
 
 .btn[disabled] {
@@ -845,30 +793,6 @@ body.modal-open .site-header {
   text-transform: uppercase;
 }
 
-.footer-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-}
-
-.footer-link-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #ffffff;
-  border-radius: 8px;
-  padding: 0.5rem 0.9rem;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.footer-link-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
 /* Drawer & Modals */
 .drawer-backdrop {
   position: fixed;
@@ -880,7 +804,9 @@ body.modal-open .site-header {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.28s ease;
+  transition:
+    opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0.28s ease;
 }
 
 .modal-backdrop {
@@ -897,7 +823,9 @@ body.modal-open .site-header {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  transition: opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.28s ease;
+  transition:
+    opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0.28s ease;
 }
 
 .drawer-backdrop.is-open {
@@ -927,14 +855,18 @@ body.modal-open .site-header {
   z-index: 9995;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(35, 95, 215, 0.15);
+  box-shadow:
+    0 0 50px rgba(0, 0, 0, 0.8),
+    0 0 30px rgba(35, 95, 215, 0.15);
   transform: translate3d(100%, 0, 0);
   will-change: transform;
   backface-visibility: hidden;
   perspective: 1000px;
   visibility: hidden;
   pointer-events: none;
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.28s ease;
+  transition:
+    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0.28s ease;
 }
 
 .cart-drawer.is-open {
@@ -1187,72 +1119,11 @@ body.modal-open .site-header {
 }
 
 /* Confirmation */
-.confirm-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: rgba(24, 157, 76, 0.12);
-  color: #137a3b;
-  font-size: 0.78rem;
-  font-weight: 700;
-  padding: 0.3rem 0.75rem;
-  border-radius: 999px;
-  margin-bottom: 0.7rem;
-}
 
 .order-confirmation h3 {
   font-family: var(--font-display);
   font-size: 1.3rem;
   margin: 0 0 0.75rem;
-}
-
-.email-status-banner {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.55rem;
-  padding: 0.75rem 0.9rem;
-  border-radius: 10px;
-  font-size: 0.84rem;
-  line-height: 1.4;
-  margin-bottom: 0.9rem;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-page);
-  color: var(--ink-secondary);
-}
-
-.email-status-banner.is-sent {
-  background: rgba(24, 157, 76, 0.1);
-  border-color: rgba(24, 157, 76, 0.25);
-  color: #137a3b;
-  font-weight: 600;
-}
-
-.email-status-banner.is-warn {
-  background: rgba(212, 161, 62, 0.12);
-  border-color: rgba(212, 161, 62, 0.35);
-  color: #7c5812;
-}
-
-.confirm-summary-card {
-  background: var(--bg-page);
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  padding: 1rem;
-  font-size: 0.86rem;
-  margin-bottom: 1.15rem;
-  white-space: pre-line;
-}
-
-.confirm-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-
-.confirm-secondary-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.65rem;
 }
 
 /* Modals */
@@ -1269,7 +1140,9 @@ body.modal-open .site-header {
   box-shadow: var(--shadow-lg);
   opacity: 0;
   transform: translateY(16px) scale(0.97);
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.24s ease;
 }
 
 .modal-backdrop.is-open .modal-dialog {
@@ -1423,11 +1296,6 @@ body.modal-open .site-header {
   font-weight: 700;
 }
 
-.product-modal-badge,
-.product-badge {
-  display: none !important;
-}
-
 .product-modal-heading {
   font-family: var(--font-display);
   font-size: 1.5rem;
@@ -1444,169 +1312,8 @@ body.modal-open .site-header {
   margin-bottom: 1.25rem;
 }
 
-.product-modal-desc {
-  display: none !important;
-}
-
-.product-modal-specs {
-  display: none !important;
-}
-
 .product-modal-cta {
   margin-top: 1.5rem;
-}
-
-/* Visionneuse 3D Rashguard */
-.modal-3d-mount {
-  width: 100%;
-}
-
-.viewer3d-stage {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-
-.viewer3d-canvas-wrap {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 4 / 4.3;
-  min-height: 290px;
-  border-radius: 14px;
-  background:
-    radial-gradient(circle at 50% 35%, rgba(14, 45, 107, 0.08), transparent 65%),
-    #f3f5f9;
-  border: 1px solid var(--border-subtle);
-  overflow: hidden;
-  touch-action: none;
-  cursor: grab;
-  user-select: none;
-}
-
-.viewer3d-canvas-wrap:active {
-  cursor: grabbing;
-}
-
-.viewer3d-canvas-wrap canvas {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.viewer3d-loading {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--ink-muted);
-}
-
-.viewer3d-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-}
-
-.viewer3d-zoom-group {
-  display: inline-flex;
-  gap: 0.3rem;
-}
-
-.viewer3d-pill {
-  border: 1px solid var(--border-strong);
-  background: #ffffff;
-  color: var(--ink-primary);
-  border-radius: 999px;
-  padding: 0.36rem 0.82rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  touch-action: manipulation;
-  transition: all 0.15s ease;
-}
-
-.viewer3d-pill:hover {
-  border-color: var(--club-navy);
-}
-
-.viewer3d-pill.is-active {
-  background: var(--club-navy);
-  border-color: var(--club-navy);
-  color: #ffffff;
-}
-
-.viewer3d-hint {
-  text-align: center;
-  font-size: 0.76rem;
-  color: var(--ink-muted);
-}
-
-.modal-photo-tabs {
-  display: flex;
-  justify-content: center;
-  gap: 0.45rem;
-  margin-top: 0.65rem;
-}
-.viewer3d-fallback-wrap {
-  perspective: 1000px;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-}
-
-.viewer3d-fallback-card {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
-  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.viewer3d-fallback-card.is-flipped {
-  transform: rotateY(180deg);
-}
-
-.viewer3d-fallback-face {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  border-radius: 14px;
-  background: #0b0d12;
-  backface-visibility: hidden;
-}
-
-.viewer3d-fallback-face.is-back {
-  transform: rotateY(180deg);
-}
-
-.product-modal-specs {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 1.15rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.product-modal-specs li {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.55rem;
-  font-size: 0.88rem;
-  color: var(--ink-secondary);
-  line-height: 1.4;
-}
-
-.spec-check-icon {
-  color: var(--club-gold);
-  flex-shrink: 0;
-  margin-top: 2px;
 }
 
 /* Admin modal */
@@ -1627,27 +1334,6 @@ body.modal-open .site-header {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--whatsapp);
-}
-
-.admin-orders-section {
-  margin-top: 1.65rem;
-  padding-top: 1.35rem;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.admin-orders-header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.admin-orders-header h3 {
-  margin: 0;
-  font-size: 1rem;
-  font-family: var(--font-display);
 }
 
 .admin-orders-btns {
@@ -1905,10 +1591,6 @@ body.modal-open .site-header {
   .admin-form-grid {
     grid-template-columns: 1fr;
   }
-
-  .main-nav {
-    display: none;
-  }
 }
 
 @media (max-width: 640px) {
@@ -1937,36 +1619,6 @@ body.modal-open .site-header {
 
   .shop-view {
     padding: 1.25rem 0 2.75rem;
-  }
-
-  .category-gateway {
-    gap: 0.65rem;
-    margin-bottom: 1.35rem;
-  }
-
-  .category-card {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 0.9rem 0.75rem;
-    gap: 0.55rem;
-  }
-
-  .category-card-icon {
-    width: 42px;
-    height: 42px;
-  }
-
-  .category-card-body strong {
-    font-size: 1rem;
-  }
-
-  .category-card-body span {
-    font-size: 0.75rem;
-  }
-
-  .category-card-arrow {
-    display: none;
   }
 
   .catalog-toolbar h2 {
@@ -2211,8 +1863,6 @@ body.modal-open .site-header {
 select option {
   background: #0c1e3d;
   color: #ffffff;
-}
-  color: var(--club-navy);
 }
 
 @media (max-width: 768px) {
@@ -2474,8 +2124,7 @@ select option {
     width: 100%;
     box-shadow: none;
   }
-  .drawer-header button,
-  .confirm-actions {
+  .drawer-header button {
     display: none !important;
   }
 }
@@ -2549,50 +2198,6 @@ select option {
 }
 
 /* Bannière adhérent dans le panier */
-.cart-member-banner {
-  margin-bottom: 1.25rem;
-}
-
-.cart-member-box {
-  background: #0c1e3d;
-  border: 1px solid rgba(229, 178, 76, 0.25);
-  border-radius: 12px;
-  padding: 0.85rem 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.cart-member-box.is-guest {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.14);
-}
-
-.cart-member-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  font-size: 0.85rem;
-}
-
-.cart-member-tag {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--club-gold);
-}
-
-.cart-member-name {
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.cart-member-sub {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.8rem;
-}
 
 .btn-text-link {
   background: transparent;
@@ -2623,7 +2228,9 @@ select option {
   background: #0c1e3d;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 18px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 40px rgba(35, 95, 215, 0.25);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.75),
+    0 0 40px rgba(35, 95, 215, 0.25);
   padding: 0;
   color: #ffffff;
 }
@@ -2899,12 +2506,6 @@ select option {
   color: rgba(255, 255, 255, 0.6);
 }
 
-.member-order-items {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.85);
-  line-height: 1.45;
-}
-
 .member-order-footer {
   display: flex;
   align-items: center;
@@ -3081,43 +2682,6 @@ select option {
    PARCOURS COMMANDE & PAIEMENT PROPRE (PANIER -> CONFIRMATION)
    ========================================================================== */
 
-.checkout-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.checkout-section-header h3 {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.checkout-step-badge {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--club-gold);
-  background: rgba(229, 178, 76, 0.12);
-  border: 1px solid rgba(229, 178, 76, 0.3);
-  padding: 0.2rem 0.65rem;
-  border-radius: 999px;
-}
-
-.field-hint {
-  display: block;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.55);
-  margin-top: 0.25rem;
-  line-height: 1.35;
-}
-
 .btn-lg {
   padding: 0.95rem 1.35rem;
   font-size: 1rem;
@@ -3138,22 +2702,6 @@ select option {
   letter-spacing: 0.02em;
 }
 
-.checkout-reassurance {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.65);
-  margin-top: 0.65rem;
-  line-height: 1.35;
-  text-align: left;
-}
-
-.checkout-reassurance svg {
-  flex-shrink: 0;
-  color: var(--club-gold);
-}
-
 .confirm-notice {
   font-size: 0.88rem;
   color: rgba(255, 255, 255, 0.8);
@@ -3162,13 +2710,6 @@ select option {
 }
 
 /* Grille des modes de paiement (CB en ligne vs Retrait club) */
-.form-label-legend {
-  display: block;
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #ffffff;
-  margin-bottom: 0.5rem;
-}
 
 .payment-options-grid {
   display: grid;
@@ -3253,13 +2794,6 @@ select option {
   border: 1px solid rgba(245, 158, 11, 0.4);
 }
 
-.payment-desc {
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.65);
-  margin: 0;
-  line-height: 1.3;
-}
-
 /* Panneau Carte Bancaire en ligne */
 .payment-subpanel {
   background: rgba(7, 19, 38, 0.75);
@@ -3327,95 +2861,11 @@ select option {
 }
 
 /* Badge Stripe Professionnel */
-.stripe-badge-box {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.stripe-badge-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.stripe-badge-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: rgba(229, 178, 76, 0.15);
-  border: 1px solid rgba(229, 178, 76, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #e5b24c;
-  flex-shrink: 0;
-}
-
-.stripe-badge-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.stripe-badge-info strong {
-  font-size: 0.92rem;
-  color: #ffffff;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.stripe-badge-info span {
-  font-size: 0.75rem;
-  color: #94a3b8;
-}
 
 .stripe-card-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
-}
-
-.stripe-badge-note {
-  font-size: 0.78rem;
-  line-height: 1.45;
-  color: #cbd5e1;
-  margin: 0;
-  padding: 0.65rem 0.85rem;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
-  border-left: 3px solid #10b981;
-}
-
-.card-inputs-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-}
-
-.card-inputs-grid .full-col {
-  grid-column: 1 / -1;
-}
-
-.card-input-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.card-input-wrap input {
-  padding-right: 5rem;
-  font-family: monospace;
-  letter-spacing: 0.06em;
-  font-size: 0.95rem;
-}
-
-.card-chips {
-  position: absolute;
-  right: 0.65rem;
-  display: flex;
-  gap: 0.25rem;
-  pointer-events: none;
 }
 
 .card-chip {
@@ -3428,61 +2878,7 @@ select option {
   color: #ffffff;
 }
 
-.payment-secure-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.74rem;
-  color: #6ee7b7;
-  margin-top: 0.75rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.payment-secure-badge svg {
-  color: #10b981;
-}
-
 /* Avertissement Réservation Retrait au Club */
-.reservation-warning-box {
-  background: rgba(245, 158, 11, 0.08);
-  border: 1.5px solid rgba(245, 158, 11, 0.45);
-  border-radius: 12px;
-  padding: 1rem 1.1rem;
-  color: #ffffff;
-}
-
-.reservation-warning-head {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  color: #fbbf24;
-  font-size: 0.92rem;
-  margin-bottom: 0.45rem;
-}
-
-.reservation-warning-head svg {
-  color: #f59e0b;
-  flex-shrink: 0;
-}
-
-.reservation-warning-box p {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.85);
-  margin: 0 0 0.65rem;
-  line-height: 1.4;
-}
-
-.reservation-reminder-highlight {
-  background: rgba(0, 0, 0, 0.35);
-  border-left: 3px solid #fbbf24;
-  padding: 0.65rem 0.85rem;
-  border-radius: 0 8px 8px 0;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #fef3c7;
-  line-height: 1.4;
-}
 
 @media (max-width: 480px) {
   .payment-options-grid {
@@ -3553,17 +2949,6 @@ select option {
   padding: 1.15rem;
   margin-bottom: 1rem;
 }
-
-.checkout-block-title {
-  margin: 0 0 0.85rem;
-  font-size: 0.78rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--club-gold);
-}
-
-/* Écran Confirmation Pro */
 /* ==========================================================================
    ANIMATIONS SMOOTH CONFIRMATION COMMANDE & PAIEMENT
    ========================================================================== */
@@ -3588,8 +2973,12 @@ select option {
   align-items: center;
   justify-content: center;
   margin-bottom: 0.85rem;
-  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7), 0 10px 28px rgba(5, 150, 105, 0.45);
-  animation: checkPopIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both, checkPulseGlow 2.2s infinite ease-out 0.8s;
+  box-shadow:
+    0 0 0 0 rgba(16, 185, 129, 0.7),
+    0 10px 28px rgba(5, 150, 105, 0.45);
+  animation:
+    checkPopIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both,
+    checkPulseGlow 2.2s infinite ease-out 0.8s;
 }
 
 @keyframes checkPopIn {
@@ -3609,13 +2998,19 @@ select option {
 
 @keyframes checkPulseGlow {
   0% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.65), 0 10px 28px rgba(5, 150, 105, 0.4);
+    box-shadow:
+      0 0 0 0 rgba(16, 185, 129, 0.65),
+      0 10px 28px rgba(5, 150, 105, 0.4);
   }
   70% {
-    box-shadow: 0 0 0 18px rgba(16, 185, 129, 0), 0 10px 28px rgba(5, 150, 105, 0.4);
+    box-shadow:
+      0 0 0 18px rgba(16, 185, 129, 0),
+      0 10px 28px rgba(5, 150, 105, 0.4);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0), 0 10px 28px rgba(5, 150, 105, 0.4);
+    box-shadow:
+      0 0 0 0 rgba(16, 185, 129, 0),
+      0 10px 28px rgba(5, 150, 105, 0.4);
   }
 }
 
@@ -3676,26 +3071,6 @@ select option {
   border-radius: 999px;
   letter-spacing: 0.05em;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-}
-
-.confirm-status-alert {
-  border-radius: 10px;
-  padding: 0.85rem 1rem;
-  font-size: 0.85rem;
-  line-height: 1.45;
-  margin-bottom: 1rem;
-}
-
-.confirm-status-alert.is-paid {
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  color: #6ee7b7;
-}
-
-.confirm-status-alert.is-reserved {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  color: #fde68a;
 }
 
 .confirm-notice {
@@ -3823,99 +3198,6 @@ select option {
     transform: translate(var(--tx, 0), var(--ty, 0)) scale(0) rotate(var(--rot, 360deg));
     opacity: 0;
   }
-}
-
-/* ==========================================================================
-   CARTE ADHÉRENT CAISSE (PARCOURS SANS RESSAISIE)
-   ========================================================================== */
-
-.checkout-member-verified-box {
-  background: linear-gradient(135deg, rgba(16, 42, 77, 0.95), rgba(7, 19, 38, 0.98));
-  border: 1px solid rgba(229, 178, 76, 0.35);
-  border-radius: 14px;
-  padding: 1rem 1.15rem;
-  margin-bottom: 1.15rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-}
-
-.checkout-member-pill-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.85rem;
-}
-
-.member-pill-left {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  min-width: 0;
-}
-
-.member-pill-avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #e5b24c, #c9932a);
-  color: #071326;
-  font-weight: 800;
-  font-size: 0.95rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(229, 178, 76, 0.4);
-  flex-shrink: 0;
-}
-
-.member-pill-details {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-}
-
-.member-pill-tag {
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #4ade80;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.member-pill-name {
-  font-size: 0.98rem;
-  font-weight: 700;
-  color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.member-pill-phone {
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.btn-member-switch {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 0.78rem;
-  font-weight: 600;
-  padding: 0.4rem 0.75rem;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
-
-.btn-member-switch:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.3);
 }
 
 /* ==========================================================================
@@ -4056,11 +3338,9 @@ body {
 /* Rétroaction tactile instantanée sans latence sur les écrans tactiles */
 @media (hover: none) and (pointer: coarse) {
   .btn:active,
-  .size-btn:active,
   .cart-trigger:active,
   .account-trigger:active,
   .segmented-btn:active,
-  .category-card:active,
   .icon-close-btn:active,
   .qty-stepper button:active {
     transform: scale(0.96) !important;
@@ -4157,12 +3437,6 @@ body {
     flex-direction: column;
     align-items: stretch;
     gap: 0.85rem;
-  }
-
-  .catalog-toolbar-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
   }
 
   .catalog-toolbar h2 {
@@ -4328,11 +3602,6 @@ body {
     font-size: 1.05rem;
   }
 
-  .drawer-close {
-    width: 40px;
-    height: 40px;
-  }
-
   .drawer-body {
     padding: 1rem 1rem calc(env(safe-area-inset-bottom, 20px) + 1.25rem);
     overscroll-behavior: contain;
@@ -4391,20 +3660,6 @@ body {
     padding: 0.35rem 0.75rem;
   }
 
-  .checkout-member-verified-box {
-    padding: 0.85rem 0.95rem;
-  }
-
-  .member-pill-avatar {
-    width: 38px;
-    height: 38px;
-    font-size: 0.88rem;
-  }
-
-  .member-pill-name {
-    font-size: 0.92rem;
-  }
-
   /* Cartes de mode de paiement empilées avec bonne surface de frappe */
   .payment-options-grid {
     grid-template-columns: 1fr;
@@ -4416,16 +3671,6 @@ body {
     border-radius: 12px;
   }
 
-  .card-inputs-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.65rem;
-  }
-
-  .card-inputs-grid .full-col {
-    grid-column: span 2;
-  }
-
-  .card-input-wrap input,
   .form-field input {
     height: 48px;
     border-radius: 10px;
@@ -4563,7 +3808,7 @@ body {
   }
 
   .tab-label-extra {
-    display: none; /* Masque le suffixe long sur smartphone */
+    display: none;
   }
 
   /* Profil Connecté Mobile */
@@ -4751,39 +3996,9 @@ body {
     font-size: 0.95rem;
   }
 
-  .payment-desc {
-    font-size: 0.8rem;
-    margin-top: 0.25rem;
-  }
-
-  .card-inputs-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.55rem;
-  }
-
-  .card-inputs-grid .full-col {
-    grid-column: span 2;
-  }
-
-  .card-input-wrap input {
-    padding-right: 85px;
-  }
-
-  .card-chips {
-    right: 8px;
-    gap: 3px;
-  }
-
   .card-chip {
     font-size: 0.58rem;
     padding: 1px 4px;
-  }
-
-  .reservation-warning-box {
-    padding: 0.95rem 1rem;
-    font-size: 0.82rem;
-    line-height: 1.5;
-    border-radius: 12px;
   }
 
   #submit-order-btn {
@@ -4839,15 +4054,11 @@ body {
   }
 
   .account-btn-label {
-    display: none; /* Garde uniquement l'icône/avatar sur les écrans ultra-étroits */
+    display: none;
   }
 
   .cart-trigger span:first-child {
-    display: none; /* Affiche uniquement l'icône et le badge de quantité */
-  }
-
-  .category-card {
-    padding: 0.75rem 0.5rem;
+    display: none;
   }
 
   .account-modal-header h2 {
@@ -4859,8 +4070,3 @@ body {
     padding: 0.55rem 0.2rem;
   }
 }
-
-
-
-
-

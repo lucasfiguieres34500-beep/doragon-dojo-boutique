@@ -45,13 +45,13 @@ const isConfigured = Boolean(
   SUPABASE_URL &&
   SUPABASE_KEY &&
   SUPABASE_URL.startsWith('http') &&
-  !SUPABASE_URL.includes('your-project')
+  !SUPABASE_URL.includes('your-project'),
 );
 
 if (isConfigured) {
   try {
     supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: { persistSession: false }
+      auth: { persistSession: false },
     });
     console.log(`[Supabase] Client initialisé avec succès sur : ${SUPABASE_URL}`);
   } catch (err) {
@@ -59,7 +59,9 @@ if (isConfigured) {
     supabase = null;
   }
 } else {
-  console.log('[Database] Supabase non configuré — Utilisation de la base locale JSON (data/*.json)');
+  console.log(
+    '[Database] Supabase non configuré — Utilisation de la base locale JSON (data/*.json)',
+  );
 }
 
 function isSupabaseActive() {
@@ -105,7 +107,7 @@ async function getUsers() {
           favoriteGlovesSize: row.favorite_gloves_size || 'L/XL',
           salt: row.salt,
           hash: row.hash,
-          createdAt: row.created_at
+          createdAt: row.created_at,
         }));
       }
       console.warn('[Supabase] Erreur getUsers, bascule locale :', error?.message);
@@ -117,7 +119,9 @@ async function getUsers() {
 }
 
 async function findUserByEmail(email) {
-  const cleanEmail = String(email || '').trim().toLowerCase();
+  const cleanEmail = String(email || '')
+    .trim()
+    .toLowerCase();
   if (!cleanEmail) return null;
 
   if (isSupabaseActive()) {
@@ -138,7 +142,7 @@ async function findUserByEmail(email) {
           favoriteGlovesSize: data.favorite_gloves_size || 'L/XL',
           salt: data.salt,
           hash: data.hash,
-          createdAt: data.created_at
+          createdAt: data.created_at,
         };
       }
     } catch (err) {
@@ -155,11 +159,7 @@ async function findUserById(id) {
 
   if (isSupabaseActive()) {
     try {
-      const { data, error } = await supabase
-        .from('members')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
+      const { data, error } = await supabase.from('members').select('*').eq('id', id).maybeSingle();
 
       if (!error && data) {
         return {
@@ -171,7 +171,7 @@ async function findUserById(id) {
           favoriteGlovesSize: data.favorite_gloves_size || 'L/XL',
           salt: data.salt,
           hash: data.hash,
-          createdAt: data.created_at
+          createdAt: data.created_at,
         };
       }
     } catch (err) {
@@ -206,7 +206,7 @@ async function saveUser(user) {
         favorite_gloves_size: user.favoriteGlovesSize || 'L/XL',
         salt: user.salt,
         hash: user.hash,
-        created_at: user.createdAt || new Date().toISOString()
+        created_at: user.createdAt || new Date().toISOString(),
       };
       const { error } = await supabase.from('members').upsert(row);
       if (error) console.error('[Supabase] Erreur upsert member :', error.message);
@@ -226,8 +226,14 @@ async function updateUserProfile(id, updates) {
     ...user,
     name: updates.name !== undefined ? updates.name : user.name,
     phone: updates.phone !== undefined ? updates.phone : user.phone,
-    favoriteRashguardSize: updates.favoriteRashguardSize !== undefined ? updates.favoriteRashguardSize : user.favoriteRashguardSize,
-    favoriteGlovesSize: updates.favoriteGlovesSize !== undefined ? updates.favoriteGlovesSize : user.favoriteGlovesSize
+    favoriteRashguardSize:
+      updates.favoriteRashguardSize !== undefined
+        ? updates.favoriteRashguardSize
+        : user.favoriteRashguardSize,
+    favoriteGlovesSize:
+      updates.favoriteGlovesSize !== undefined
+        ? updates.favoriteGlovesSize
+        : user.favoriteGlovesSize,
   };
 
   return await saveUser(updated);
@@ -245,7 +251,10 @@ async function getAllOrders() {
         .order('created_at', { ascending: false });
 
       if (!error && Array.isArray(data)) {
-        return data.map((row) => ({
+        const local = readLocalJson(ORDERS_FILE, []);
+        const combined = new Map(local.map((order) => [order.ref, order]));
+        const remote = data.map((row) => ({
+          ...combined.get(row.ref),
           ref: row.ref,
           memberId: row.member_id,
           createdAt: row.created_at,
@@ -257,8 +266,12 @@ async function getAllOrders() {
           paymentStatus: row.payment_status,
           memberNote: row.member_note || '',
           total: Number(row.total) || 0,
-          items: Array.isArray(row.items) ? row.items : []
+          items: Array.isArray(row.items) ? row.items : [],
         }));
+        remote.forEach((order) => combined.set(order.ref, order));
+        return [...combined.values()].sort((a, b) =>
+          String(b.createdAt).localeCompare(String(a.createdAt)),
+        );
       }
       console.warn('[Supabase] Erreur getAllOrders, bascule locale :', error?.message);
     } catch (err) {
@@ -271,7 +284,9 @@ async function getAllOrders() {
 
 async function getOrdersForMember(memberId, memberEmail) {
   const all = await getAllOrders();
-  const cleanEmail = String(memberEmail || '').trim().toLowerCase();
+  const cleanEmail = String(memberEmail || '')
+    .trim()
+    .toLowerCase();
 
   return all.filter((o) => {
     if (memberId && o.memberId === memberId) return true;
@@ -283,6 +298,8 @@ async function getOrdersForMember(memberId, memberEmail) {
 async function saveOrder(order) {
   // 1. Sauvegarde locale en miroir
   const local = readLocalJson(ORDERS_FILE, []);
+  const existing = local.find((entry) => entry.ref === order.ref);
+  if (existing) return existing;
   local.unshift(order);
   writeLocalJson(ORDERS_FILE, local);
 
@@ -301,7 +318,7 @@ async function saveOrder(order) {
         payment_status: order.paymentStatus,
         member_note: order.memberNote || '',
         total: Number(order.total) || 0,
-        items: order.items
+        items: order.items,
       };
       const { error } = await supabase.from('orders').insert(row);
       if (error) console.error('[Supabase] Erreur insert order :', error.message);
@@ -366,12 +383,14 @@ async function saveStock(stock) {
             product_id: productId,
             size,
             quantity: Number(qty) || 0,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           });
         }
       }
       if (rows.length > 0) {
-        const { error } = await supabase.from('stock').upsert(rows, { onConflict: 'product_id,size' });
+        const { error } = await supabase
+          .from('stock')
+          .upsert(rows, { onConflict: 'product_id,size' });
         if (error) console.error('[Supabase] Erreur upsert stock :', error.message);
       }
     } catch (err) {
@@ -394,20 +413,28 @@ async function getProducts() {
         .eq('is_active', true)
         .order('id', { ascending: true });
 
-      if (!error && Array.isArray(data) && data.length > 0) {
+      if (!error && Array.isArray(data)) {
         return data.map((row) => {
           const defaultProd = DEFAULT_PRODUCTS.find((p) => p.id === row.id) || {};
           const cat = row.category === 'gants' ? 'gants' : 'rashguard';
-          const sizes = Array.isArray(row.sizes) && row.sizes.length
-            ? row.sizes
-            : (defaultProd.sizes || (cat === 'gants' ? ['S/M', 'L/XL'] : ['XS', 'S', 'M', 'L', 'XL', 'XXL']));
+          const sizes =
+            Array.isArray(row.sizes) && row.sizes.length
+              ? row.sizes
+              : defaultProd.sizes ||
+                (cat === 'gants' ? ['S/M', 'L/XL'] : ['XS', 'S', 'M', 'L', 'XL', 'XXL']);
           return {
             id: row.id,
-            name: row.name || defaultProd.name || (cat === 'gants' ? 'Gants MMA / Grappling' : 'Rashguard Officiel'),
+            name:
+              row.name ||
+              defaultProd.name ||
+              (cat === 'gants' ? 'Gants MMA / Grappling' : 'Rashguard Officiel'),
             category: cat,
             categoryLabel: cat === 'gants' ? 'Gants MMA' : 'Rashguard',
             price: Number(row.price) || defaultProd.price || (cat === 'gants' ? 50 : 40),
-            image: defaultProd.image || row.image || (cat === 'gants' ? 'assets/gants-mma.jpg' : 'assets/rashguard-mc-front-white.jpg'),
+            image:
+              defaultProd.image ||
+              row.image ||
+              (cat === 'gants' ? 'assets/gants-mma.jpg' : 'assets/rashguard-mc-front-white.jpg'),
             images: defaultProd.images || [{ src: defaultProd.image || row.image, label: 'Face' }],
             description: '',
             shortDesc: '',
@@ -415,7 +442,7 @@ async function getProducts() {
             sizeLabel: 'Taille',
             sizes,
             defaultSize: defaultProd.defaultSize || sizes[0],
-            specs: defaultProd.specs || []
+            specs: defaultProd.specs || [],
           };
         });
       }
@@ -426,7 +453,7 @@ async function getProducts() {
 
   // Fallback local
   const local = readLocalJson(PRODUCTS_FILE, null);
-  if (local && Array.isArray(local) && local.length > 0) return local;
+  if (Array.isArray(local)) return local;
   return DEFAULT_PRODUCTS;
 }
 
@@ -444,10 +471,26 @@ async function saveProducts(products) {
         description: p.description || '',
         badge: p.badge || '',
         sizes: p.sizes,
-        is_active: true
+        is_active: true,
       }));
-      const { error } = await supabase.from('products').upsert(rows);
-      if (error) console.error('[Supabase] Erreur upsert products :', error.message);
+      const { data: active, error: readError } = await supabase
+        .from('products')
+        .select('id')
+        .eq('is_active', true);
+      if (readError) throw readError;
+      if (rows.length) {
+        const { error } = await supabase.from('products').upsert(rows);
+        if (error) throw error;
+      }
+      const ids = new Set(rows.map((row) => row.id));
+      const removed = (active || []).filter((row) => !ids.has(row.id)).map((row) => row.id);
+      if (removed.length) {
+        const { error } = await supabase
+          .from('products')
+          .update({ is_active: false })
+          .in('id', removed);
+        if (error) throw error;
+      }
     } catch (err) {
       console.error('[Supabase] Exception upsert products :', err.message);
     }
@@ -469,5 +512,5 @@ module.exports = {
   getStock,
   saveStock,
   getProducts,
-  saveProducts
+  saveProducts,
 };

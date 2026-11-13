@@ -1,26 +1,33 @@
 (() => {
   'use strict';
 
-  const { DEFAULT_SETTINGS, PRODUCTS: DEFAULT_PRODUCTS, createDefaultStock, normalizeStock } = window.CLUB_CATALOG;
+  const {
+    DEFAULT_SETTINGS,
+    PRODUCTS: DEFAULT_PRODUCTS,
+    createDefaultStock,
+    normalizeStock,
+  } = window.CLUB_CATALOG;
 
   const STORAGE_KEYS = {
     PRODUCTS: 'club_shop_products_v1',
     STOCK: 'club_shop_stock_v1',
     SETTINGS: 'club_shop_settings_v1',
     ORDERS: 'club_shop_orders_v1',
-    LOCAL_PWD: 'club_shop_local_pwd_v1'
+    LOCAL_PWD: 'club_shop_local_pwd_v1',
   };
 
   const initialProducts = loadJson(STORAGE_KEYS.PRODUCTS, DEFAULT_PRODUCTS);
 
   const state = {
     authenticated: false,
-    products: Array.isArray(initialProducts) && initialProducts.length ? initialProducts : DEFAULT_PRODUCTS,
-    stock: loadStockLocal(Array.isArray(initialProducts) && initialProducts.length ? initialProducts : DEFAULT_PRODUCTS),
+    products: Array.isArray(initialProducts) ? initialProducts : DEFAULT_PRODUCTS,
+    stock: loadStockLocal(
+      Array.isArray(initialProducts) ? initialProducts : DEFAULT_PRODUCTS,
+    ),
     orders: loadJson(STORAGE_KEYS.ORDERS, []),
     members: [],
     settings: { ...DEFAULT_SETTINGS, ...loadJson(STORAGE_KEYS.SETTINGS, {}) },
-    pendingImageDataUrl: null
+    pendingImageDataUrl: null,
   };
 
   const els = {
@@ -64,15 +71,22 @@
     pwdCurrent: document.getElementById('pwd-current'),
     pwdNext: document.getElementById('pwd-next'),
     pwdFeedback: document.getElementById('pwd-feedback'),
-    toast: document.getElementById('toast')
+    toast: document.getElementById('toast'),
   };
 
   let toastTimer = null;
+  let stockUpdateBusy = false;
 
   function loadJson(key, fallback) {
     try {
       const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
+      const parsed = raw ? JSON.parse(raw) : fallback;
+      if (Array.isArray(fallback)) return Array.isArray(parsed) ? parsed : fallback;
+      if (fallback && typeof fallback === 'object')
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+          ? parsed
+          : fallback;
+      return parsed;
     } catch {
       return fallback;
     }
@@ -166,7 +180,7 @@
       const [prodRes, stockRes, ordersRes] = await Promise.all([
         fetch('/api/products'),
         fetch('/api/stock'),
-        fetch('/api/orders')
+        fetch('/api/orders'),
       ]);
       if (ordersRes.status === 401) {
         showAuthGate();
@@ -193,7 +207,11 @@
           saveJson(STORAGE_KEYS.ORDERS, state.orders);
         }
       }
-      setSyncLabel('Synchronisé avec le serveur');
+      setSyncLabel(
+        prodRes.ok && stockRes.ok && ordersRes.ok
+          ? 'Synchronisé avec le serveur'
+          : 'Synchronisation incomplète',
+      );
     } catch {
       setSyncLabel('Mode local');
     }
@@ -201,39 +219,45 @@
 
   async function persistStockUpdate(productId, size, nextQty) {
     const cleanQty = Math.max(0, Math.floor(Number(nextQty) || 0));
-    if (!state.stock[productId]) return;
-
-    state.stock[productId][size] = cleanQty;
-    saveJson(STORAGE_KEYS.STOCK, state.stock);
-    renderStats();
-    renderStockCards();
+    if (!state.stock[productId] || stockUpdateBusy) return;
 
     if (window.location.protocol.startsWith('http')) {
       setSyncLabel('Enregistrement...');
+      stockUpdateBusy = true;
+      els.stockCardsGrid.querySelectorAll('button,input').forEach((el) => {
+        el.disabled = true;
+      });
       try {
         const res = await fetch('/api/stock', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productId, size, qty: cleanQty })
+          body: JSON.stringify({ productId, size, qty: cleanQty }),
         });
         if (res.status === 401) {
           showAuthGate();
           showToast('Session expirée, reconnectez-vous.');
           return;
         }
-        if (res.ok) {
-          const data = await res.json();
-          if (data.stock) {
-            state.stock = normalizeStock(data.stock, state.products);
-            saveJson(STORAGE_KEYS.STOCK, state.stock);
-          }
-          setSyncLabel('Enregistré');
-          return;
-        }
+        const data = await res.json();
+        if (!res.ok || !data.stock)
+          throw new Error(data.error || 'Le stock n’a pas été enregistré.');
+        state.stock = normalizeStock(data.stock, state.products);
+        saveJson(STORAGE_KEYS.STOCK, state.stock);
+        setSyncLabel('Enregistré');
       } catch {
-        // Fallback local already saved
+        setSyncLabel('Échec de l’enregistrement');
+        showToast('Le stock n’a pas été modifié. Réessayez.');
+      } finally {
+        stockUpdateBusy = false;
+        renderStats();
+        renderStockCards();
       }
+      return;
     }
+    state.stock[productId][size] = cleanQty;
+    saveJson(STORAGE_KEYS.STOCK, state.stock);
+    renderStats();
+    renderStockCards();
     setSyncLabel('Enregistré (local)');
   }
 
@@ -243,7 +267,10 @@
     const category = els.newProdCategory.value;
     const price = Number(els.newProdPrice.value);
     const initialStock = Math.max(0, Math.floor(Number(els.newProdStock.value || 0)));
-    const sizes = els.newProdSizes.value.split(',').map((s) => s.trim()).filter(Boolean);
+    const sizes = els.newProdSizes.value
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
     const shortDesc = els.newProdDesc.value.trim();
 
     if (!name || !Number.isFinite(price) || price <= 0 || sizes.length === 0) {
@@ -265,8 +292,8 @@
             sizes,
             initialStock,
             shortDesc,
-            imageDataUrl: state.pendingImageDataUrl
-          })
+            imageDataUrl: state.pendingImageDataUrl,
+          }),
         });
         if (res.status === 401) {
           els.addProdSubmitBtn.disabled = false;
@@ -276,7 +303,7 @@
         const data = await res.json();
         els.addProdSubmitBtn.disabled = false;
         if (!res.ok) {
-          showToast(data.error || 'Erreur lors de l\'ajout.');
+          showToast(data.error || "Erreur lors de l'ajout.");
           return;
         }
         state.products = data.products;
@@ -289,7 +316,9 @@
         showToast(`${name} ajouté à la boutique`);
         return;
       } catch {
-        // Fallback local
+        els.addProdSubmitBtn.disabled = false;
+        showToast('Produit non enregistré. Vérifiez la connexion et réessayez.');
+        return;
       }
     }
 
@@ -306,7 +335,7 @@
       sizeLabel: 'Taille',
       sizes,
       defaultSize: sizes[0],
-      specs: [shortDesc || 'Équipement officiel du club']
+      specs: [shortDesc || 'Équipement officiel du club'],
     };
     state.products.push(newProduct);
     state.stock[id] = Object.fromEntries(sizes.map((s) => [s, initialStock]));
@@ -335,7 +364,7 @@
         const res = await fetch('/api/products/delete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: productId })
+          body: JSON.stringify({ id: productId }),
         });
         if (res.status === 401) {
           showAuthGate();
@@ -352,8 +381,10 @@
           showToast(`${target.name} retiré de la boutique`);
           return;
         }
+        throw new Error('Suppression refusée');
       } catch {
-        // Fallback local
+        showToast('Produit non supprimé. Réessayez.');
+        return;
       }
     }
 
@@ -391,18 +422,24 @@
 
   function renderStockCards() {
     if (state.products.length === 0) {
-      els.stockCardsGrid.innerHTML = '<p style="color:var(--ink-muted);margin:0;">Aucun article dans la boutique. Utilisez le formulaire ci-dessus pour en ajouter un.</p>';
+      els.stockCardsGrid.innerHTML =
+        '<p style="color:var(--ink-muted);margin:0;">Aucun article dans la boutique. Utilisez le formulaire ci-dessus pour en ajouter un.</p>';
       return;
     }
 
-    els.stockCardsGrid.innerHTML = state.products.map((product) => {
-      const productStock = state.stock[product.id] || {};
-      const productTotal = (product.sizes || []).reduce((sum, s) => sum + (Number(productStock[s]) || 0), 0);
+    els.stockCardsGrid.innerHTML = state.products
+      .map((product) => {
+        const productStock = state.stock[product.id] || {};
+        const productTotal = (product.sizes || []).reduce(
+          (sum, s) => sum + (Number(productStock[s]) || 0),
+          0,
+        );
 
-      const rowsHtml = (product.sizes || []).map((size) => {
-        const qty = Number(productStock[size] || 0);
-        const status = getStockStatus(qty);
-        return `
+        const rowsHtml = (product.sizes || [])
+          .map((size) => {
+            const qty = Number(productStock[size] || 0);
+            const status = getStockStatus(qty);
+            return `
           <div class="stock-size-row">
             <div class="stock-size-info">
               <span class="stock-size-tag">${escapeHtml(size)}</span>
@@ -440,9 +477,10 @@
             </div>
           </div>
         `;
-      }).join('');
+          })
+          .join('');
 
-      return `
+        return `
         <article class="stock-card">
           <div class="stock-card-head">
             <img src="${product.image}" alt="${escapeHtml(product.name)}" class="stock-card-img" />
@@ -470,16 +508,20 @@
           </div>
         </article>
       `;
-    }).join('');
+      })
+      .join('');
   }
 
   function renderOrders() {
     if (state.orders.length === 0) {
-      els.ordersList.innerHTML = '<p style="color:var(--ink-muted);font-size:0.9rem;margin:0;">Aucune commande enregistrée pour le moment.</p>';
+      els.ordersList.innerHTML =
+        '<p style="color:var(--ink-muted);font-size:0.9rem;margin:0;">Aucune commande enregistrée pour le moment.</p>';
       return;
     }
 
-    els.ordersList.innerHTML = state.orders.map((order) => `
+    els.ordersList.innerHTML = state.orders
+      .map(
+        (order) => `
       <div class="admin-order-row">
         <div class="admin-order-top">
           <span>${escapeHtml(order.ref)} — ${escapeHtml(order.memberName)}</span>
@@ -492,7 +534,9 @@
           ${order.items.map((i) => `${i.qty}× ${escapeHtml(i.name)} (${escapeHtml(i.size)})`).join(' · ')}
         </div>
       </div>
-    `).join('');
+    `,
+      )
+      .join('');
   }
 
   async function fetchAndRenderMembers() {
@@ -521,10 +565,13 @@
       els.membersBadge.textContent = `${count} adhérent${count > 1 ? 's' : ''}`;
     }
     if (count === 0) {
-      els.membersList.innerHTML = '<p style="color:var(--ink-muted);font-size:0.9rem;margin:0;">Aucun compte adhérent créé pour le moment.</p>';
+      els.membersList.innerHTML =
+        '<p style="color:var(--ink-muted);font-size:0.9rem;margin:0;">Aucun compte adhérent créé pour le moment.</p>';
       return;
     }
-    els.membersList.innerHTML = state.members.map((m) => `
+    els.membersList.innerHTML = state.members
+      .map(
+        (m) => `
       <div class="admin-order-row">
         <div class="admin-order-top">
           <span><strong>${escapeHtml(m.name)}</strong> (${escapeHtml(m.email)})</span>
@@ -537,7 +584,9 @@
           ${m.createdAt ? ` · Inscrit le ${new Date(m.createdAt).toLocaleDateString('fr-FR')}` : ''}
         </div>
       </div>
-    `).join('');
+    `,
+      )
+      .join('');
   }
 
   function exportOrdersCsv() {
@@ -545,18 +594,32 @@
       showToast('Aucune commande à exporter.');
       return;
     }
-    const headers = ['Reference', 'Date', 'Adherent', 'Email', 'Telephone', 'Reglement', 'Articles', 'Total_EUR', 'Remarque'];
-    const rows = state.orders.map((o) => [
-      o.ref,
-      o.dateLabel,
-      o.memberName,
-      o.memberEmail || o.memberContact || '',
-      o.memberPhone || '',
-      o.paymentMethod,
-      o.items.map((i) => `${i.qty}x ${i.name} (${i.size})`).join(' | '),
-      Number(o.total).toFixed(2),
-      o.memberNote || ''
-    ].map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(';'));
+    const headers = [
+      'Reference',
+      'Date',
+      'Adherent',
+      'Email',
+      'Telephone',
+      'Reglement',
+      'Articles',
+      'Total_EUR',
+      'Remarque',
+    ];
+    const rows = state.orders.map((o) =>
+      [
+        o.ref,
+        o.dateLabel,
+        o.memberName,
+        o.memberEmail || o.memberContact || '',
+        o.memberPhone || '',
+        o.paymentMethod,
+        o.items.map((i) => `${i.qty}x ${i.name} (${i.size})`).join(' | '),
+        Number(o.total).toFixed(2),
+        o.memberNote || '',
+      ]
+        .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+        .join(';'),
+    );
 
     const csv = '\uFEFF' + [headers.join(';'), ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -594,7 +657,7 @@
           const res = await fetch('/api/admin/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password })
+            body: JSON.stringify({ password }),
           });
           els.authSubmitBtn.disabled = false;
           els.authSubmitBtn.textContent = 'Déverrouiller';
@@ -608,7 +671,11 @@
           els.authPassword.select();
           return;
         } catch {
-          // Offline static fallback below
+          els.authSubmitBtn.disabled = false;
+          els.authSubmitBtn.textContent = 'Déverrouiller';
+          els.authError.textContent = 'Connexion au serveur impossible. Réessayez.';
+          els.authError.hidden = false;
+          return;
         }
       }
 
@@ -682,8 +749,6 @@
 
     els.clearOrdersBtn.addEventListener('click', async () => {
       if (state.orders.length === 0) return;
-      state.orders = [];
-      saveJson(STORAGE_KEYS.ORDERS, []);
       if (window.location.protocol.startsWith('http')) {
         try {
           const res = await fetch('/api/orders', { method: 'DELETE' });
@@ -691,10 +756,14 @@
             showAuthGate();
             return;
           }
+          if (!res.ok) throw new Error('Suppression refusée');
         } catch {
-          // Ignore network error
+          showToast('Historique non modifié. Réessayez.');
+          return;
         }
       }
+      state.orders = [];
+      saveJson(STORAGE_KEYS.ORDERS, []);
       renderStats();
       renderOrders();
       showToast('Historique vidé');
@@ -706,7 +775,7 @@
         clubName: els.gClubName.value.trim() || DEFAULT_SETTINGS.clubName,
         whatsapp: els.gWhatsapp.value.trim(),
         email: els.gEmail.value.trim() || DEFAULT_SETTINGS.email,
-        footerNote: els.gFooterNote.value.trim() || DEFAULT_SETTINGS.footerNote
+        footerNote: els.gFooterNote.value.trim() || DEFAULT_SETTINGS.footerNote,
       };
       saveJson(STORAGE_KEYS.SETTINGS, state.settings);
       els.clubName.textContent = state.settings.clubName;
@@ -724,7 +793,7 @@
           const res = await fetch('/api/admin/password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ currentPassword, newPassword })
+            body: JSON.stringify({ currentPassword, newPassword }),
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) {
@@ -736,7 +805,8 @@
           showToast('Mot de passe mis à jour');
           return;
         } catch {
-          // Fallback local
+          showToast('Mot de passe non modifié. Vérifiez la connexion et réessayez.');
+          return;
         }
       }
 
