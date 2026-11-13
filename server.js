@@ -3,8 +3,23 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const Stripe = require('stripe');
 
 loadEnv(path.join(__dirname, '.env'));
+
+const STRIPE_SECRET_KEY = (process.env.STRIPE_SECRET_KEY || '').trim();
+const STRIPE_PUBLISHABLE_KEY = (process.env.STRIPE_PUBLISHABLE_KEY || '').trim();
+let stripe = null;
+try {
+  if (STRIPE_SECRET_KEY) {
+    stripe = new Stripe(STRIPE_SECRET_KEY);
+    console.log('[Stripe] Passerelle initialisée avec succès');
+  } else {
+    console.log('[Stripe] En attente de configuration de STRIPE_SECRET_KEY');
+  }
+} catch (err) {
+  console.error('[Stripe] Erreur initialisation :', err.message);
+}
 
 const { PRODUCTS: DEFAULT_PRODUCTS, createDefaultStock, normalizeStock } = require('./catalog.js');
 const db = require('./db.js');
@@ -449,8 +464,201 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, {
       ok: true,
       emailConfigured: isSmtpConfigured(),
+      stripeConfigured: Boolean(stripe),
       database: db.isSupabaseConfigured() ? 'supabase' : 'local-json'
     });
+  }
+
+  // --- Endpoints Stripe (Paiements sécurisés en ligne) ---
+  if (req.method === 'GET' && urlPath === '/api/stripe-config') {
+    return sendJson(res, 200, {
+      ok: true,
+      enabled: Boolean(stripe),
+      publishableKey: STRIPE_PUBLISHABLE_KEY
+    });
+  }
+
+  if (req.method === 'POST' && urlPath === '/api/create-checkout-session') {
+    if (!stripe) {
+      return sendJson(res, 500, { ok: false, error: 'Passerelle Stripe non configurée sur le serveur.' });
+    }
+    try {
+      const body = await readJsonBody(req);
+      const memberName = String(body.memberName || '').trim();
+      const authMember = await getAuthenticatedMember(req);
+      const memberEmail = String(body.memberEmail || (authMember ? authMember.email : '')).trim();
+      const items = Array.isArray(body.items) ? body.items : [];
+
+      if (!memberName || items.length === 0) {
+        return sendJson(res, 400, { ok: false, error: 'Nom complet et articles dans le panier requis.' });
+      }
+
+      // Vérification du stock en temps réel avant redirection
+      const currentStock = await db.getStock();
+      for (const item of items) {
+        const qty = Math.max(1, Math.floor(Number(item.qty) || 1));
+        const available = currentStock[item.id]?.[item.size];
+        if (typeof available === 'number' && available < qty) {
+          return sendJson(res, 409, {
+            ok: false,
+            error: `Stock insuffisant pour ${item.name} (${item.size}) — restant : ${available}.`,
+            stock: currentStock
+          });
+        }
+      }
+
+      const ref = String(body.ref || `CLUB-${Math.floor(1000 + Math.random() * 9000)}`);
+
+      let origin = 'https://doragon-dojo-boutique.onrender.com';
+      if (req.headers.origin) {
+        origin = req.headers.origin;
+      } else if (req.headers.referer) {
+        try {
+          origin = new URL(req.headers.referer).origin;
+        } catch (e) {}
+      }
+
+      const lineItems = items.map((item) => {
+        const qty = Math.max(1, Math.floor(Number(item.qty) || 1));
+        const unitAmount = Math.round((Number(item.lineTotal) / qty) * 100);
+        return {
+          price_data: {
+            currency: 'eur',
+            product_data: {
+              name: `${item.name} (${item.size})`,
+              description: `Équipement officiel DORAGON DOJO CLUB — Taille ${item.size}`
+            },
+            unit_amount: unitAmount
+          },
+          quantity: qty
+        };
+      });
+
+      const session = await stripe.checkout.sessions.create({
+        line_items: lineItems,
+        mode: 'payment',
+        customer_email: memberEmail && memberEmail.includes('@') ? memberEmail : undefined,
+        client_reference_id: ref,
+        metadata: {
+          ref,
+          memberName,
+          memberEmail,
+          memberPhone: String(body.memberPhone || '').trim(),
+          memberNote: String(body.memberNote || '').trim(),
+          memberId: authMember ? authMember.id : (body.memberId || ''),
+          itemsJson: JSON.stringify(items.map((i) => ({
+            id: i.id,
+            name: i.name,
+            size: i.size,
+            qty: i.qty,
+            lineTotal: i.lineTotal
+          }))).slice(0, 500)
+        },
+        success_url: `${origin}/?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/?payment=cancelled`
+      });
+
+      return sendJson(res, 200, {
+        ok: true,
+        url: session.url,
+        sessionId: session.id,
+        ref
+      });
+    } catch (err) {
+      console.error('[Stripe] Erreur création session :', err);
+      return sendJson(res, 500, { ok: false, error: err.message || 'Erreur lors de la préparation du paiement sécurisé.' });
+    }
+  }
+
+  if (req.method === 'GET' && urlPath === '/api/verify-checkout-session') {
+    if (!stripe) {
+      return sendJson(res, 500, { ok: false, error: 'Passerelle Stripe non configurée.' });
+    }
+    try {
+      const reqUrl = new URL(req.url, 'http://localhost');
+      const sessionId = reqUrl.searchParams.get('session_id');
+      if (!sessionId) {
+        return sendJson(res, 400, { ok: false, error: 'session_id requis.' });
+      }
+
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      if (!session) {
+        return sendJson(res, 404, { ok: false, error: 'Session Stripe introuvable.' });
+      }
+
+      if (session.payment_status !== 'paid') {
+        return sendJson(res, 400, {
+          ok: false,
+          error: 'Le paiement n\'a pas été validé par Stripe.',
+          paymentStatus: session.payment_status
+        });
+      }
+
+      const allOrders = await db.getAllOrders();
+      const ref = session.metadata?.ref || session.client_reference_id;
+      const existing = allOrders.find((o) => o.stripeSessionId === sessionId || (ref && o.ref === ref));
+
+      if (existing) {
+        return sendJson(res, 200, { ok: true, order: existing, alreadyProcessed: true });
+      }
+
+      let items = [];
+      try {
+        if (session.metadata?.itemsJson) {
+          items = JSON.parse(session.metadata.itemsJson);
+        }
+      } catch (e) {}
+
+      // Mise à jour du stock
+      const currentStock = await db.getStock();
+      for (const item of items) {
+        const qty = Math.max(1, Math.floor(Number(item.qty) || 1));
+        if (currentStock[item.id] && typeof currentStock[item.id][item.size] === 'number') {
+          currentStock[item.id][item.size] = Math.max(0, currentStock[item.id][item.size] - qty);
+        }
+      }
+      const updatedStock = await db.saveStock(currentStock);
+
+      const orderRef = ref || `CLUB-${Math.floor(1000 + Math.random() * 9000)}`;
+      const memberName = session.metadata?.memberName || session.customer_details?.name || 'Adhérent';
+      const memberEmail = session.metadata?.memberEmail || session.customer_details?.email || session.customer_email || '';
+      const memberPhone = session.metadata?.memberPhone || session.customer_details?.phone || '';
+      const memberNote = session.metadata?.memberNote || '';
+      const memberId = session.metadata?.memberId || null;
+      const total = session.amount_total ? session.amount_total / 100 : 0;
+
+      const order = {
+        ref: orderRef,
+        memberId: memberId || null,
+        createdAt: new Date().toISOString(),
+        dateLabel: new Date().toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }),
+        memberName,
+        memberEmail,
+        memberPhone,
+        paymentMethod: 'Paiement en ligne par Carte Bancaire (Stripe)',
+        paymentStatus: 'Payé en ligne (Stripe CB)',
+        memberNote,
+        total,
+        stripeSessionId: session.id,
+        stripePaymentIntent: String(session.payment_intent || ''),
+        items
+      };
+
+      await db.saveOrder(order);
+
+      const clubName = process.env.CLUB_NAME || 'DORAGON DOJO CLUB';
+      const mailResult = await mailer.sendOrderConfirmationEmail(order, clubName, memberEmail);
+
+      return sendJson(res, 200, {
+        ok: true,
+        order,
+        stock: updatedStock,
+        emailSent: Boolean(mailResult && mailResult.sent)
+      });
+    } catch (err) {
+      console.error('[Stripe] Erreur vérification session :', err);
+      return sendJson(res, 500, { ok: false, error: err.message });
+    }
   }
 
   if (req.method === 'GET' && urlPath === '/api/admin/session') {

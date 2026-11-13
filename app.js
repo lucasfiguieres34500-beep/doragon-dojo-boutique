@@ -944,23 +944,61 @@
     }
 
     if (!isClub) {
-      const cardNum = (document.getElementById('card-number')?.value || '').replace(/\s/g, '');
-      const cardExp = (document.getElementById('card-expiry')?.value || '').trim();
-      const cardCvc = (document.getElementById('card-cvc')?.value || '').trim();
+      // --- PAIEMENT EN LIGNE SÉCURISÉ VIA STRIPE ---
+      els.submitOrderBtn.disabled = true;
+      const labelSpan = document.getElementById('submit-order-btn-label');
+      if (labelSpan) labelSpan.textContent = 'Redirection vers Stripe...';
 
-      if (cardNum.length < 15 || !/^\d+$/.test(cardNum)) {
-        showToast('Veuillez renseigner un numéro de carte bancaire valide (16 chiffres).');
-        document.getElementById('card-number')?.focus();
+      const stripePayload = {
+        memberName,
+        memberEmail,
+        memberPhone,
+        memberNote,
+        total: totalPrice,
+        memberId: state.member ? state.member.id : null,
+        items: lines.map(({ product, size, qty, lineTotal }) => ({
+          id: product.id,
+          name: product.name,
+          size,
+          qty,
+          lineTotal
+        }))
+      };
+
+      try {
+        const res = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(stripePayload)
+        });
+        const data = await res.json();
+
+        if (res.status === 409) {
+          if (data.stock) {
+            state.stock = normalizeStock(data.stock);
+            saveJson(STORAGE_KEYS.STOCK, state.stock);
+            renderProducts();
+          }
+          els.submitOrderBtn.disabled = false;
+          updateSubmitOrderBtnUi(totalPrice);
+          showToast(data.error || 'Stock insuffisant pour certains articles.');
+          return;
+        }
+
+        if (!res.ok || !data.ok || !data.url) {
+          els.submitOrderBtn.disabled = false;
+          updateSubmitOrderBtnUi(totalPrice);
+          showToast(data.error || 'Impossible d\'initialiser le paiement sécurisé Stripe.');
+          return;
+        }
+
+        // Redirection instantanée vers Stripe Checkout
+        window.location.href = data.url;
         return;
-      }
-      if (!/^\d{2}\/\d{2}$/.test(cardExp)) {
-        showToast('Veuillez renseigner l\'expiration au format MM/AA.');
-        document.getElementById('card-expiry')?.focus();
-        return;
-      }
-      if (cardCvc.length < 3) {
-        showToast('Veuillez renseigner le code cryptogramme CVC (3 chiffres).');
-        document.getElementById('card-cvc')?.focus();
+      } catch (err) {
+        els.submitOrderBtn.disabled = false;
+        updateSubmitOrderBtnUi(totalPrice);
+        showToast('Erreur de connexion avec le serveur de paiement.');
         return;
       }
     }
@@ -988,7 +1026,7 @@
     };
 
     els.submitOrderBtn.disabled = true;
-    els.submitOrderBtn.textContent = isClub ? 'Enregistrement de la réservation...' : 'Paiement en cours...';
+    els.submitOrderBtn.textContent = 'Enregistrement de la réservation...';
 
     let serverSyncedStock = false;
 
@@ -1981,6 +2019,56 @@
     }
   }
 
+  async function checkStripePaymentReturn() {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment');
+    const sessionId = params.get('session_id');
+
+    if (paymentStatus === 'cancelled') {
+      showToast('Paiement annulé. Votre panier est conservé.');
+      window.history.replaceState({}, document.title, window.location.pathname);
+      openCartDrawer();
+      return;
+    }
+
+    if (paymentStatus === 'success' && sessionId) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      showToast('Paiement reçu ! Confirmation de votre commande en cours...');
+
+      try {
+        const res = await fetch(`/api/verify-checkout-session?session_id=${encodeURIComponent(sessionId)}`);
+        const data = await res.json();
+
+        if (res.ok && data.ok && data.order) {
+          state.cart = [];
+          saveJson(STORAGE_KEYS.CART, []);
+          renderCart();
+
+          state.orders.unshift(data.order);
+          if (state.member) {
+            state.memberOrders.unshift(data.order);
+          }
+          saveJson(STORAGE_KEYS.ORDERS, state.orders);
+          state.lastOrder = data.order;
+
+          if (data.stock) {
+            state.stock = normalizeStock(data.stock, state.products);
+            saveJson(STORAGE_KEYS.STOCK, state.stock);
+            renderProducts();
+          }
+
+          displayOrderConfirmation(data.order);
+          openCartDrawer();
+          showToast('Commande confirmée avec succès ! Reçu envoyé par email.');
+        } else {
+          showToast(data.error || 'Erreur lors de la validation du paiement Stripe.');
+        }
+      } catch (err) {
+        showToast('Erreur réseau lors de la validation du paiement.');
+      }
+    }
+  }
+
   function init() {
     applySettingsToUi();
     if (state.member) {
@@ -2001,6 +2089,7 @@
     bindEvents();
     syncOverlayState();
     syncCatalogAndStockFromServer();
+    checkStripePaymentReturn();
   }
 
   init();
