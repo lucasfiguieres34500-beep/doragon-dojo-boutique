@@ -6,6 +6,16 @@
 
 const fs = require('fs');
 const path = require('path');
+
+// Polyfill WebSocket pour les environnements Node < 22 (comme certains conteneurs Render)
+if (typeof global.WebSocket === 'undefined') {
+  try {
+    global.WebSocket = require('ws');
+  } catch (e) {
+    // ws optionnel si Node 22+
+  }
+}
+
 const { createClient } = require('@supabase/supabase-js');
 const { PRODUCTS: DEFAULT_PRODUCTS, createDefaultStock, normalizeStock } = require('./catalog.js');
 
