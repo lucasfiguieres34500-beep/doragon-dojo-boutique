@@ -4,8 +4,8 @@
   const DEFAULT_SETTINGS = {
     clubName: 'DORAGON DOJO CLUB',
     whatsapp: '',
-    email: 'boutique@monclub.fr',
-    footerNote: 'Retrait et règlement directement au club.'
+    email: 'adherent.doragon@gmail.com',
+    footerNote: ''
   };
 
   const PRODUCTS = [
@@ -13,19 +13,36 @@
       id: 'rashguard-mc',
       category: 'rashguard',
       categoryLabel: 'Rashguard',
-      name: 'Rashguard Manche Courte',
+      name: 'Rashguard Édition Luta Livre',
       price: 40,
-      image: 'assets/rashguard-mc-front-white.jpg',
-      backImage: 'assets/rashguard-mc-back-white.jpg',
-      shortDesc: 'Édition LUTA LIVRE — DORAGON DOJO CLUB avec soleil levant, Mont Fuji et dragon intégral face/dos.',
+      image: 'assets/rashguard-luta-livre.jpg',
+      badge: 'Édition Club',
+      shortDesc: 'Tenue de compression officielle Luta Livre & Grappling · Soleil levant, Mont Fuji et dragon.',
       sizeLabel: 'Taille',
       sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
       defaultSize: 'M',
       specs: [
-        'Design intégral face, dos et manches imprimé par sublimation',
-        'Matière légère à séchage ultra-rapide',
-        'Coutures plates renforcées pour grappling et MMA',
-        'Lavable en machine à 30 °C'
+        'Tissu compression 4-way stretch respirant et ultra-résistant',
+        'Impression intégrale par sublimation inaltérable (face, dos, manches)',
+        'Coutures plates renforcées anti-frottements pour le combat'
+      ]
+    },
+    {
+      id: 'rashguard-camo',
+      category: 'rashguard',
+      categoryLabel: 'Rashguard',
+      name: 'Rashguard Édition Camo Wave',
+      price: 40,
+      image: 'assets/rashguard-camo.jpg',
+      badge: 'Édition Club',
+      shortDesc: 'Design artistique dynamique rouge et bleu marine · Idéal pour le grappling et l\'entraînement.',
+      sizeLabel: 'Taille',
+      sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+      defaultSize: 'M',
+      specs: [
+        'Tissu compression 4-way stretch respirant et ultra-résistant',
+        'Impression intégrale par sublimation inaltérable (face, dos, manches)',
+        'Coutures plates renforcées anti-frottements pour le combat'
       ]
     },
     {
@@ -35,16 +52,15 @@
       name: 'Gants MMA / Grappling',
       price: 50,
       image: 'assets/gants-mma.jpg',
-      shortDesc: 'Paume ouverte ergonomique pour saisie & soumissions.',
+      badge: 'Équipement Pro',
+      shortDesc: 'Gants de combat et grappling préformés · Liberté de préhension et absorption des chocs.',
       sizeLabel: 'Taille',
       sizes: ['S/M', 'L/XL'],
-      defaultSize: 'L/XL',
+      defaultSize: 'S/M',
       specs: [
-        'Paume ouverte et pouce articulé pour saisie et grappling',
-        'Rembourrage dense préformé sur les phalanges',
-        'Large serrage velcro blanc renforcé au poignet',
-        'Doublure intérieure anti-glisse',
-        'Coloris vagues rouge, blanc et bleu'
+        'Paume ouverte et pouce articulé pour saisies et soumissions',
+        'Rembourrage mousse haute densité préformé sur les métacarpes',
+        'Fermeture poignet par large bande velcro renforcée'
       ]
     }
   ];

@@ -237,7 +237,7 @@ function buildReceiptEmail(order, clubName) {
       </tr>
       <tr>
         <td style="padding:16px 28px;background:#0d1526;color:#cbd5e1;font-size:12px;text-align:center;">
-          ${safeClub} — Retrait et règlement directement au club.
+          ${safeClub} — Boutique Officielle des Adhérents
         </td>
       </tr>
     </table>

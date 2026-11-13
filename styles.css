@@ -832,10 +832,17 @@ body.modal-open .site-header {
   font-size: 0.96rem;
 }
 
-.footer-brand p {
-  margin: 0.1rem 0 0;
-  font-size: 0.82rem;
-  color: #94a3b8;
+.footer-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-tagline {
+  font-size: 0.76rem;
+  color: var(--club-gold);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .footer-actions {
@@ -1280,19 +1287,77 @@ body.modal-open .site-header {
 
 .product-modal-grid {
   display: grid;
-  grid-template-columns: 1fr 1.1fr;
-  gap: 1.4rem;
-  align-items: start;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.product-modal-gallery {
+  position: relative;
+}
+
+.product-modal-img-wrap {
+  width: 100%;
+  border-radius: 16px;
+  background: radial-gradient(circle at 50% 50%, rgba(27, 83, 184, 0.15) 0%, #040914 85%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
 }
 
 .product-modal-img {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  max-height: 380px;
   object-fit: contain;
-  border-radius: 12px;
-  background: #ffffff;
-  border: 1px solid var(--border-subtle);
-  padding: 0.5rem;
+  border-radius: 10px;
+  display: block;
+  filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.6));
+}
+
+.product-modal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--club-gold);
+  background: rgba(229, 178, 76, 0.12);
+  border: 1px solid rgba(229, 178, 76, 0.3);
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+
+.product-modal-heading {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 0.35rem;
+  line-height: 1.2;
+}
+
+.product-modal-price {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--club-gold);
+  margin-bottom: 0.75rem;
+}
+
+.product-modal-desc {
+  font-size: 0.9rem;
+  color: var(--ink-secondary);
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+.product-modal-cta {
+  margin-top: 1.15rem;
 }
 
 /* Visionneuse 3D Rashguard */
@@ -1425,14 +1490,27 @@ body.modal-open .site-header {
 }
 
 .product-modal-specs {
-  margin: 0.85rem 0 1.15rem;
-  padding-left: 1.1rem;
-  font-size: 0.88rem;
-  color: var(--ink-secondary);
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
 }
 
-.product-modal-specs li + li {
-  margin-top: 0.35rem;
+.product-modal-specs li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.88rem;
+  color: var(--ink-secondary);
+  line-height: 1.4;
+}
+
+.spec-check-icon {
+  color: var(--club-gold);
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 /* Admin modal */
@@ -3627,65 +3705,110 @@ select option {
   border-color: rgba(255, 255, 255, 0.3);
 }
 
-.member-pill-reassurance {
-  margin-top: 0.75rem;
-  padding-top: 0.65rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.65);
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
 /* ==========================================================================
-   BLOC COMPTE OBLIGATOIRE POUR ACHETER
+   PAIEMENT ÉPURÉ & PROFESSIONNEL
    ========================================================================== */
 
-.auth-required-card {
-  background: linear-gradient(135deg, rgba(16, 42, 77, 0.96), rgba(7, 19, 38, 0.98));
-  border: 1px solid rgba(229, 178, 76, 0.35);
-  border-radius: 16px;
-  padding: 1.5rem 1.25rem;
-  text-align: center;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  margin-bottom: 1.25rem;
+.checkout-member-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(27, 83, 184, 0.12);
+  border: 1px solid rgba(37, 99, 235, 0.28);
+  border-radius: 12px;
+  margin-bottom: 1rem;
 }
 
-.auth-required-icon-wrap {
-  width: 58px;
-  height: 58px;
+.member-chip-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.member-chip-avatar {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #e5b24c, #c9932a);
-  color: #071326;
+  background: var(--club-navy);
+  color: var(--club-gold);
+  font-weight: 800;
+  font-size: 0.85rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 0.95rem;
-  box-shadow: 0 4px 16px rgba(229, 178, 76, 0.45);
+  border: 1px solid rgba(229, 178, 76, 0.35);
+  flex-shrink: 0;
+}
+
+.member-chip-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.member-chip-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.member-chip-sub {
+  font-size: 0.78rem;
+  color: var(--ink-secondary);
+}
+
+.auth-required-card {
+  background: rgba(7, 19, 38, 0.7);
+  border: 1px solid rgba(229, 178, 76, 0.3);
+  border-radius: 14px;
+  padding: 1.25rem 1rem;
+  text-align: center;
+  margin-bottom: 1rem;
 }
 
 .auth-required-title {
   font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 800;
+  font-size: 1.15rem;
+  font-weight: 700;
   color: #ffffff;
-  margin: 0 0 0.45rem;
-  letter-spacing: 0.02em;
+  margin: 0 0 0.35rem;
 }
 
 .auth-required-desc {
-  font-size: 0.88rem;
-  color: rgba(255, 255, 255, 0.82);
-  line-height: 1.5;
-  margin: 0 0 1.25rem;
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.45;
+  margin: 0 0 1rem;
 }
 
 .auth-required-btns {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.65rem;
   width: 100%;
+}
+
+.auth-required-btns .btn {
+  flex: 1;
+  min-height: 44px;
+  font-size: 0.88rem;
+  border-radius: 10px;
+}
+
+.reservation-simple-notice {
+  padding: 0.85rem 1rem;
+  background: rgba(229, 178, 76, 0.08);
+  border: 1px solid rgba(229, 178, 76, 0.22);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: var(--ink-secondary);
+  line-height: 1.45;
+  margin-top: 0.65rem;
 }
 
 .auth-required-btns .btn {
@@ -4358,39 +4481,40 @@ body {
      CAISSE & PAIEMENT SUR MOBILE (ZERO COLLISION, TOUCH TARGETS PROPRES)
      ========================================================================== */
   .auth-required-card {
-    padding: 1.35rem 1rem;
+    padding: 1.15rem 0.85rem;
     text-align: center;
   }
 
-  .auth-required-icon {
-    width: 52px;
-    height: 52px;
-    margin: 0 auto 0.75rem;
-  }
-
   .auth-required-title {
-    font-size: 1.2rem;
-    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+    margin-bottom: 0.35rem;
   }
 
   .auth-required-desc {
-    font-size: 0.85rem;
-    line-height: 1.5;
-    margin-bottom: 1.15rem;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    margin-bottom: 0.95rem;
   }
 
   .auth-required-btns {
     display: flex;
-    flex-direction: column;
-    gap: 0.65rem;
+    gap: 0.5rem;
     width: 100%;
   }
 
   .auth-required-btns .btn {
-    width: 100% !important;
-    min-height: 50px !important;
-    font-size: 0.92rem !important;
-    border-radius: 12px;
+    flex: 1;
+    width: auto !important;
+    min-height: 46px !important;
+    font-size: 0.88rem !important;
+    border-radius: 10px !important;
+  }
+
+  .reservation-simple-notice {
+    padding: 0.85rem 0.95rem;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    border-radius: 10px;
   }
 
   .payment-options-grid {

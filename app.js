@@ -300,11 +300,12 @@
         `;
       }).join('');
 
+      const badgeText = product.badge || (product.category === 'gants' ? 'Équipement Pro' : 'Édition Club');
       return `
         <article class="product-card" data-product-id="${product.id}" style="--card-index:${index};">
           <div class="product-media" data-action="open-details" data-product-id="${product.id}">
             <img src="${product.image}" alt="${escapeHtml(product.name)}" loading="lazy" />
-            <span class="product-badge">${escapeHtml(product.categoryLabel)}</span>
+            <span class="product-badge">${escapeHtml(badgeText)}</span>
           </div>
           <div class="product-body">
             <div class="product-top-row">
@@ -313,7 +314,7 @@
             </div>
 
             <div class="size-picker-label">
-              <span>${escapeHtml(product.sizeLabel)} : <strong>${escapeHtml(selectedSize)}</strong></span>
+              <span>Taille : <strong>${escapeHtml(selectedSize)}</strong></span>
               ${formatStockLabel(selectedStock)}
             </div>
             <div class="size-pills">${sizeButtons}</div>
@@ -331,7 +332,7 @@
                   <path d="M3 6h18" />
                   <path d="M16 10a4 4 0 0 1-8 0" />
                 </svg>
-                <span>${selectedStock <= 0 ? 'Rupture de stock' : 'Ajouter'}</span>
+                <span>${selectedStock <= 0 ? 'Rupture' : 'Ajouter'}</span>
               </button>
               <button
                 type="button"
@@ -552,7 +553,7 @@
         <img src="${product.image}" alt="${escapeHtml(product.name)}" class="cart-item-img" />
         <div class="cart-item-info">
           <p class="cart-item-title">${escapeHtml(product.name)}</p>
-          <div class="cart-item-meta">${escapeHtml(product.sizeLabel)} : <strong>${escapeHtml(size)}</strong></div>
+          <div class="cart-item-meta">Taille : <strong>${escapeHtml(size)}</strong></div>
           <div class="cart-item-controls">
             <div class="qty-stepper">
               <button type="button" data-action="qty-dec" data-product-id="${product.id}" data-size="${escapeHtml(size)}" aria-label="Diminuer">-</button>
@@ -606,56 +607,58 @@
       `;
     }).join('');
 
-    const photoTabs = product.backImage ? `
-      <div class="modal-photo-tabs" id="modal-photo-tabs">
-        <button type="button" class="viewer3d-pill is-active" data-photo-side="front">Face</button>
-        <button type="button" class="viewer3d-pill" data-photo-side="back">Dos</button>
-      </div>
-    ` : '';
+    const badgeText = product.badge || (product.category === 'gants' ? 'Équipement Pro' : 'Édition Club');
+    const specsList = Array.isArray(product.specs) && product.specs.length
+      ? product.specs
+      : (product.category === 'gants'
+          ? [
+              'Paume ouverte et pouce articulé pour saisies et soumissions',
+              'Mousse haute densité injectée sur les zones d\'impact',
+              'Fermeture poignet par large bande velcro renforcée'
+            ]
+          : [
+              'Tissu compression 4-way stretch respirant et ultra-résistant',
+              'Impression intégrale par sublimation inaltérable (face, dos, manches)',
+              'Coutures plates renforcées anti-frottements pour le combat'
+            ]);
 
     els.productModalContent.innerHTML = `
       <div class="product-modal-grid">
-        <div>
-          <img src="${product.image}" alt="${escapeHtml(product.name)}" class="product-modal-img" id="modal-product-img" />
-          ${photoTabs}
+        <div class="product-modal-gallery">
+          <div class="product-modal-img-wrap">
+            <img src="${product.image}" alt="${escapeHtml(product.name)}" class="product-modal-img" id="modal-product-img" />
+          </div>
         </div>
-        <div>
-          <h2 id="modal-product-title" style="margin:0 0 0.35rem;font-family:var(--font-display);">${escapeHtml(product.name)}</h2>
-          <div class="product-price" style="margin-bottom:0.65rem;">${formatEuro(product.price)}</div>
-          <p style="margin:0 0 0.85rem;font-size:0.9rem;color:var(--ink-secondary);">${escapeHtml(product.shortDesc)}</p>
+        <div class="product-modal-info">
+          <div class="product-modal-badge">${escapeHtml(badgeText)}</div>
+          <h2 id="modal-product-title" class="product-modal-heading">${escapeHtml(product.name)}</h2>
+          <div class="product-modal-price">${formatEuro(product.price)}</div>
+
+          <p class="product-modal-desc">${escapeHtml(product.shortDesc || product.description || '')}</p>
+
           <ul class="product-modal-specs">
-            ${product.specs.map((spec) => `<li>${escapeHtml(spec)}</li>`).join('')}
+            ${specsList.map((spec) => `
+              <li>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="spec-check-icon"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>${escapeHtml(spec)}</span>
+              </li>
+            `).join('')}
           </ul>
+
           <div class="size-picker-label">
-            <span>${escapeHtml(product.sizeLabel)} : <strong id="modal-size-text">${escapeHtml(modalSize)}</strong></span>
+            <span>Taille sélectionnée : <strong id="modal-size-text">${escapeHtml(modalSize)}</strong></span>
             <span id="modal-stock-label">${formatStockLabel(modalStock)}</span>
           </div>
           <div class="size-pills" id="modal-size-pills">${sizePills}</div>
-          <button type="button" class="btn btn-primary btn-full" id="modal-add-btn" ${modalStock <= 0 ? 'disabled' : ''}>
-            ${modalStock <= 0 ? 'Rupture de stock' : `Ajouter au panier — ${formatEuro(product.price)}`}
-          </button>
-          <button type="button" class="btn btn-secondary btn-full" id="modal-close-action-btn" style="margin-top:0.65rem;">
-            Fermer
-          </button>
+
+          <div class="product-modal-cta">
+            <button type="button" class="btn btn-primary btn-full btn-lg" id="modal-add-btn" ${modalStock <= 0 ? 'disabled' : ''}>
+              <span>${modalStock <= 0 ? 'Rupture de stock' : `Ajouter au panier — ${formatEuro(product.price)}`}</span>
+            </button>
+          </div>
         </div>
       </div>
     `;
-
-    document.getElementById('modal-close-action-btn').addEventListener('click', closeProductModal);
-
-    if (product.backImage) {
-      const modalImg = document.getElementById('modal-product-img');
-      const photoTabsEl = document.getElementById('modal-photo-tabs');
-      photoTabsEl.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-photo-side]');
-        if (!btn) return;
-        const isBack = btn.dataset.photoSide === 'back';
-        modalImg.src = isBack ? product.backImage : product.image;
-        photoTabsEl.querySelectorAll('[data-photo-side]').forEach((b) => {
-          b.classList.toggle('is-active', b === btn);
-        });
-      });
-    }
 
     const pillsWrap = document.getElementById('modal-size-pills');
     const modalAddBtn = document.getElementById('modal-add-btn');
@@ -671,9 +674,7 @@
       modalSizeText.textContent = modalSize;
       modalStockLabel.innerHTML = formatStockLabel(qty);
       modalAddBtn.disabled = qty <= 0;
-      modalAddBtn.textContent = qty <= 0
-        ? 'Rupture de stock'
-        : `Ajouter au panier — ${formatEuro(product.price)}`;
+      modalAddBtn.innerHTML = `<span>${qty <= 0 ? 'Rupture de stock' : `Ajouter au panier — ${formatEuro(product.price)}`}</span>`;
       pillsWrap.querySelectorAll('.size-pill').forEach((p) => {
         p.classList.toggle('is-selected', p.dataset.modalSize === modalSize);
       });
@@ -886,7 +887,7 @@
     const isClub = radioClub && radioClub.checked;
     const labelSpan = document.getElementById('submit-order-btn-label');
     const badgeSpan = document.getElementById('submit-order-price-badge');
-    if (labelSpan) labelSpan.textContent = isClub ? 'Réserver mon équipement' : 'Payer en ligne';
+    if (labelSpan) labelSpan.textContent = isClub ? 'Confirmer la commande' : 'Valider et Payer';
     if (badgeSpan) badgeSpan.textContent = formatEuro(totalPrice);
   }
 
@@ -904,10 +905,10 @@
     if (noticeEl) {
       if (isClub) {
         noticeEl.className = 'confirm-notice is-reservation';
-        noticeEl.innerHTML = `<strong>🥋 Réservation au club enregistrée !</strong> Vos articles sont mis de côté. Le règlement intégral de <strong>${formatEuro(order.total)}</strong> s'effectuera directement à l'accueil du dojo lors du retrait (Espèces ou CB).`;
+        noticeEl.innerHTML = `<strong>Commande enregistrée !</strong> Règlement de <strong>${formatEuro(order.total)}</strong> directement au dojo lors du retrait.`;
       } else {
         noticeEl.className = 'confirm-notice is-paid';
-        noticeEl.innerHTML = `<strong>💳 Paiement en ligne validé !</strong> Votre commande de <strong>${formatEuro(order.total)}</strong> est confirmée. Vos équipements sont préparés et vous attendent à l'accueil.`;
+        noticeEl.innerHTML = `<strong>Paiement validé !</strong> Votre commande de <strong>${formatEuro(order.total)}</strong> est confirmée.`;
       }
     }
 

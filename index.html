@@ -101,9 +101,9 @@
     <div class="container footer-inner">
       <div class="footer-brand">
         <img src="assets/logo.jpg" alt="Logo DORAGON DOJO CLUB" class="footer-logo" />
-        <div>
+        <div class="footer-text">
           <strong id="footer-club-name">DORAGON DOJO CLUB</strong>
-          <p id="footer-club-note">Retrait et règlement directement au club.</p>
+          <span class="footer-tagline">Boutique Officielle des Adhérents</span>
         </div>
       </div>
     </div>
@@ -175,41 +175,26 @@
             <span class="checkout-total-pill" id="checkout-mini-total">0,00 €</span>
           </div>
 
-          <!-- Carte Adhérent Connecté (Coordonnées validées - 0 saisie requise) -->
-          <div class="checkout-member-verified-box" id="checkout-logged-user-box" hidden>
-            <div class="checkout-member-pill-card">
-              <div class="member-pill-left">
-                <span class="member-pill-avatar" id="checkout-member-avatar">LM</span>
-                <div class="member-pill-details">
-                  <div class="member-pill-tag">✓ Adhérent Club Identifié</div>
-                  <strong class="member-pill-name" id="checkout-member-name-label">Lucas Martin</strong>
-                  <span class="member-pill-phone" id="checkout-member-phone-label">📱 06 12 34 56 78</span>
-                </div>
+          <!-- Adhérent Connecté -->
+          <div class="checkout-member-chip" id="checkout-logged-user-box" hidden>
+            <div class="member-chip-left">
+              <span class="member-chip-avatar" id="checkout-member-avatar">LT</span>
+              <div class="member-chip-details">
+                <strong class="member-chip-name" id="checkout-member-name-label">Lucas Test</strong>
+                <span class="member-chip-sub" id="checkout-member-phone-label">06 12 34 56 78</span>
               </div>
-              <button type="button" class="btn-member-switch" id="btn-switch-account-checkout">Gérer</button>
             </div>
-            <div class="member-pill-reassurance">
-              <span>Coordonnées enregistrées sur votre compte · Prêt pour validation</span>
-            </div>
+            <button type="button" class="btn-text-link" id="btn-switch-account-checkout">Modifier</button>
           </div>
 
-          <!-- Bloc Si non connecté : Compte Adhérent Obligatoire -->
+          <!-- Si non connecté : Connexion requise -->
           <div class="checkout-block" id="checkout-auth-required-box">
             <div class="auth-required-card">
-              <div class="auth-required-icon-wrap">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-              </div>
               <h3 class="auth-required-title">Compte Adhérent Requis</h3>
-              <p class="auth-required-desc">
-                Pour commander votre équipement et centraliser votre reçu officiel PDF, vous devez posséder un compte adhérent au club.
-              </p>
+              <p class="auth-required-desc">Connectez-vous pour valider votre commande et recevoir votre reçu officiel.</p>
               <div class="auth-required-btns">
-                <button type="button" class="btn btn-primary btn-full btn-lg" id="btn-checkout-register">
-                  <span>Créer mon compte (30 sec)</span>
-                </button>
-                <button type="button" class="btn btn-secondary btn-full" id="btn-checkout-login">
-                  <span>Déjà inscrit ? Me connecter</span>
-                </button>
+                <button type="button" class="btn btn-primary btn-full" id="btn-checkout-login">Se connecter</button>
+                <button type="button" class="btn btn-secondary btn-full" id="btn-checkout-register">Créer mon compte</button>
               </div>
             </div>
           </div>
@@ -218,90 +203,81 @@
             <input type="hidden" id="member-name" name="memberName" />
             <input type="hidden" id="member-phone" name="memberPhone" />
 
-            <!-- Section de Paiement visible uniquement si adhérent connecté -->
+            <!-- Section de Paiement -->
             <div id="checkout-payment-section">
               <div class="checkout-block">
-                <h3 class="checkout-block-title">Mode de règlement</h3>
                 <div class="payment-options-grid">
-                <label class="payment-option-card is-active" id="opt-label-online">
-                  <input type="radio" name="paymentOption" value="online" checked class="payment-radio" />
-                  <div class="payment-option-content">
-                    <div class="payment-option-head">
-                      <span class="payment-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-                      </span>
-                      <strong class="payment-title">Carte Bancaire</strong>
-                      <span class="payment-pill pill-gold">En ligne</span>
-                    </div>
-                    <p class="payment-desc">Paiement sécurisé immédiat.</p>
-                  </div>
-                </label>
-
-                <label class="payment-option-card" id="opt-label-club">
-                  <input type="radio" name="paymentOption" value="club" class="payment-radio" />
-                  <div class="payment-option-content">
-                    <div class="payment-option-head">
-                      <span class="payment-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                      </span>
-                      <strong class="payment-title">Retrait au club</strong>
-                      <span class="payment-pill pill-amber">Sur place</span>
-                    </div>
-                    <p class="payment-desc">Réservation · Paiement au dojo.</p>
-                  </div>
-                </label>
-              </div>
-
-              <!-- Panneau Carte Bancaire -->
-              <div class="payment-subpanel" id="online-card-panel">
-                <div class="card-inputs-grid">
-                  <div class="form-field full-col">
-                    <label for="card-number">Numéro de carte</label>
-                    <div class="card-input-wrap">
-                      <input type="text" id="card-number" placeholder="4970 •••• •••• ••••" maxlength="19" inputmode="numeric" />
-                      <div class="card-chips">
-                        <span class="card-chip">CB</span>
-                        <span class="card-chip">VISA</span>
-                        <span class="card-chip">MC</span>
+                  <label class="payment-option-card is-active" id="opt-label-online">
+                    <input type="radio" name="paymentOption" value="online" checked class="payment-radio" />
+                    <div class="payment-option-content">
+                      <div class="payment-option-head">
+                        <span class="payment-icon">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                        </span>
+                        <strong class="payment-title">Carte Bancaire</strong>
+                        <span class="payment-pill pill-gold">En ligne</span>
                       </div>
                     </div>
+                  </label>
+
+                  <label class="payment-option-card" id="opt-label-club">
+                    <input type="radio" name="paymentOption" value="club" class="payment-radio" />
+                    <div class="payment-option-content">
+                      <div class="payment-option-head">
+                        <span class="payment-icon">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        </span>
+                        <strong class="payment-title">Paiement au club</strong>
+                        <span class="payment-pill pill-amber">Sur place</span>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                <!-- Panneau Carte Bancaire -->
+                <div class="payment-subpanel" id="online-card-panel">
+                  <div class="card-inputs-grid">
+                    <div class="form-field full-col">
+                      <label for="card-number">Numéro de carte</label>
+                      <div class="card-input-wrap">
+                        <input type="text" id="card-number" placeholder="4970 •••• •••• ••••" maxlength="19" inputmode="numeric" />
+                        <div class="card-chips">
+                          <span class="card-chip">CB</span>
+                          <span class="card-chip">VISA</span>
+                          <span class="card-chip">MC</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-field">
+                      <label for="card-expiry">Expiration</label>
+                      <input type="text" id="card-expiry" placeholder="MM/AA" maxlength="5" inputmode="numeric" />
+                    </div>
+                    <div class="form-field">
+                      <label for="card-cvc">CVC</label>
+                      <input type="password" id="card-cvc" placeholder="123" maxlength="3" inputmode="numeric" />
+                    </div>
                   </div>
-                  <div class="form-field">
-                    <label for="card-expiry">Expiration</label>
-                    <input type="text" id="card-expiry" placeholder="MM/AA" maxlength="5" inputmode="numeric" />
-                  </div>
-                  <div class="form-field">
-                    <label for="card-cvc">Cryptogramme (CVC)</label>
-                    <input type="password" id="card-cvc" placeholder="123" maxlength="3" inputmode="numeric" />
+                  <div class="payment-secure-badge">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <span>Paiement 100% sécurisé SSL 256 bits</span>
                   </div>
                 </div>
-                <div class="payment-secure-badge">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  <span>Paiement chiffré SSL 256 bits · Doragon Dojo</span>
+
+                <!-- Panneau Paiement au Club -->
+                <div class="payment-subpanel" id="club-reservation-panel" hidden>
+                  <div class="reservation-simple-notice">
+                    <span>🥋 Règlement de <strong class="text-gold" id="reservation-amount-text">0,00 €</strong> à la remise de votre tenue (Espèces ou CB).</span>
+                  </div>
                 </div>
               </div>
 
-              <!-- Panneau Retrait Club (Avertissement Réservation) -->
-              <div class="payment-subpanel" id="club-reservation-panel" hidden>
-                <div class="reservation-warning-box">
-                  <div class="reservation-warning-head">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                    <strong>Réservation en ligne uniquement</strong>
-                  </div>
-                  <p class="reservation-text">
-                    Aucun montant n'est débité maintenant. Le règlement complet de <strong class="text-gold" id="reservation-amount-text">0,00 €</strong> s'effectue sur place au club (en Espèces ou par Carte Bancaire) lors de la remise de votre tenue.
-                  </p>
-                </div>
+              <div class="checkout-block">
+                <button type="submit" class="btn btn-primary btn-full btn-lg" id="submit-order-btn">
+                  <span id="submit-order-btn-label">Payer en ligne</span>
+                  <span class="btn-price-badge" id="submit-order-price-badge">0,00 €</span>
+                </button>
               </div>
             </div>
-
-            <div class="checkout-block">
-              <button type="submit" class="btn btn-primary btn-full btn-lg" id="submit-order-btn">
-                <span id="submit-order-btn-label">Payer en ligne</span>
-                <span class="btn-price-badge" id="submit-order-price-badge">0,00 €</span>
-              </button>
-            </div>
-          </div>
           </form>
         </div>
       </div>

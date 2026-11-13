@@ -395,16 +395,38 @@ async function getProducts() {
         .order('id', { ascending: true });
 
       if (!error && Array.isArray(data) && data.length > 0) {
-        return data.map((row) => ({
-          id: row.id,
-          name: row.name,
-          category: row.category,
-          price: Number(row.price),
-          image: row.image,
-          description: row.description || '',
-          badge: row.badge || '',
-          sizes: Array.isArray(row.sizes) ? row.sizes : []
-        }));
+        return data.map((row) => {
+          const defaultProd = DEFAULT_PRODUCTS.find((p) => p.id === row.id) || {};
+          const cat = row.category === 'gants' ? 'gants' : 'rashguard';
+          const sizes = Array.isArray(row.sizes) && row.sizes.length
+            ? row.sizes
+            : (defaultProd.sizes || (cat === 'gants' ? ['S/M', 'L/XL'] : ['XS', 'S', 'M', 'L', 'XL', 'XXL']));
+          return {
+            id: row.id,
+            name: row.name || defaultProd.name || (cat === 'gants' ? 'Gants MMA / Grappling' : 'Rashguard Officiel'),
+            category: cat,
+            categoryLabel: cat === 'gants' ? 'Gants MMA' : 'Rashguard',
+            price: Number(row.price) || defaultProd.price || (cat === 'gants' ? 50 : 40),
+            image: row.image || defaultProd.image || (cat === 'gants' ? 'assets/gants-mma.jpg' : 'assets/rashguard-luta-livre.jpg'),
+            description: row.description || defaultProd.shortDesc || defaultProd.description || '',
+            shortDesc: row.description || defaultProd.shortDesc || (cat === 'gants' ? 'Gants officiels sparring & grappling.' : 'Tenue de compression officielle.'),
+            badge: row.badge || defaultProd.badge || (cat === 'gants' ? 'Équipement Pro' : 'Édition Club'),
+            sizeLabel: 'Taille',
+            sizes,
+            defaultSize: defaultProd.defaultSize || sizes[0],
+            specs: defaultProd.specs || (cat === 'gants'
+              ? [
+                  'Paume ouverte et pouce articulé pour saisies et soumissions',
+                  'Rembourrage mousse haute densité préformé sur les métacarpes',
+                  'Fermeture poignet par large bande velcro renforcée'
+                ]
+              : [
+                  'Tissu compression 4-way stretch respirant et ultra-résistant',
+                  'Impression intégrale par sublimation inaltérable (face, dos, manches)',
+                  'Coutures plates renforcées anti-frottements pour le combat'
+                ])
+          };
+        });
       }
     } catch (err) {
       console.warn('[Supabase] Exception getProducts :', err.message);
