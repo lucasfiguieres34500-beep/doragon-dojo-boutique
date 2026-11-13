@@ -14,7 +14,7 @@
       category: 'rashguard',
       categoryLabel: 'Rashguard',
       name: 'Rashguard Édition Luta Livre',
-      price: 40,
+      price: 25,
       image: 'assets/rashguard-mc-front-white.jpg',
       images: [
         { src: 'assets/rashguard-mc-front-white.jpg', label: 'Face' },
@@ -38,7 +38,7 @@
       category: 'rashguard',
       categoryLabel: 'Rashguard',
       name: 'Rashguard Édition Camo Wave',
-      price: 40,
+      price: 25,
       image: 'assets/rashguard-camo-front-white.jpg',
       images: [
         { src: 'assets/rashguard-camo-front-white.jpg', label: 'Face' },
@@ -62,7 +62,7 @@
       category: 'gants',
       categoryLabel: 'Gants MMA',
       name: 'Gants MMA / Grappling',
-      price: 50,
+      price: 35,
       image: 'assets/gants-mma.jpg',
       images: [
         { src: 'assets/gants-mma.jpg', label: 'Face' }
