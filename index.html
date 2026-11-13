@@ -175,18 +175,50 @@
             <span class="checkout-total-pill" id="checkout-mini-total">0,00 €</span>
           </div>
 
-          <div class="cart-member-banner" id="cart-member-banner"></div>
+          <!-- Carte Adhérent Connecté (Coordonnées validées - 0 saisie requise) -->
+          <div class="checkout-member-verified-box" id="checkout-logged-user-box" hidden>
+            <div class="checkout-member-pill-card">
+              <div class="member-pill-left">
+                <span class="member-pill-avatar" id="checkout-member-avatar">LM</span>
+                <div class="member-pill-details">
+                  <div class="member-pill-tag">✓ Adhérent Club Identifié</div>
+                  <strong class="member-pill-name" id="checkout-member-name-label">Lucas Martin</strong>
+                  <span class="member-pill-phone" id="checkout-member-phone-label">📱 06 12 34 56 78</span>
+                </div>
+              </div>
+              <button type="button" class="btn-member-switch" id="btn-switch-account-checkout">Gérer</button>
+            </div>
+            <div class="member-pill-reassurance">
+              <span>Coordonnées enregistrées sur votre compte · Prêt pour validation</span>
+            </div>
+          </div>
 
           <form class="checkout-form" id="checkout-form">
-            <div class="checkout-block">
-              <h3 class="checkout-block-title">Vos coordonnées</h3>
-              <div class="form-field">
-                <label for="member-name">Nom et prénom complet *</label>
-                <input type="text" id="member-name" name="memberName" required autocomplete="name" placeholder="Ex : Lucas Martin" />
+            <!-- Champs coordonnées cachés pour le compte connecté ou visibles pour invité -->
+            <div class="checkout-block" id="checkout-guest-box">
+              <div class="checkout-guest-incentive">
+                <div class="guest-incentive-head">
+                  <span class="guest-incentive-badge">🥋 Déjà adhérent du club ?</span>
+                  <p class="guest-incentive-text">Connectez-vous ou créez votre compte pour enregistrer vos coordonnées une seule fois.</p>
+                </div>
+                <div class="guest-incentive-actions">
+                  <button type="button" class="btn btn-sm btn-outline-gold" id="btn-checkout-login">Se connecter</button>
+                  <button type="button" class="btn btn-sm btn-primary" id="btn-checkout-register">Créer mon compte</button>
+                </div>
               </div>
-              <div class="form-field">
-                <label for="member-phone">Téléphone portable *</label>
-                <input type="tel" id="member-phone" name="memberPhone" required autocomplete="tel" placeholder="06 12 34 56 78" />
+
+              <div class="guest-coords-fields" id="guest-coords-fields">
+                <div class="guest-coords-divider">
+                  <span>Ou commander directement</span>
+                </div>
+                <div class="form-field">
+                  <label for="member-name">Nom et prénom complet *</label>
+                  <input type="text" id="member-name" name="memberName" required autocomplete="name" placeholder="Ex : Lucas Martin" />
+                </div>
+                <div class="form-field">
+                  <label for="member-phone">Téléphone portable *</label>
+                  <input type="tel" id="member-phone" name="memberPhone" required autocomplete="tel" placeholder="06 12 34 56 78" />
+                </div>
               </div>
             </div>
 
@@ -279,7 +311,10 @@
       <div class="order-confirmation" id="order-confirmation" hidden>
         <div class="confirm-head-box">
           <div class="confirm-check-icon">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <svg class="checkmark-svg" viewBox="0 0 52 52" aria-hidden="true">
+              <circle class="checkmark-circle" cx="26" cy="26" r="23" fill="none" />
+              <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+            </svg>
           </div>
           <h3 class="confirm-title">Commande confirmée !</h3>
           <div class="confirm-ref-tag" id="confirm-order-ref">Réf. CLUB-0000</div>
@@ -436,8 +471,8 @@
             <input type="email" id="reg-email" name="email" required autocomplete="email" placeholder="lucas@exemple.fr" />
           </div>
           <div class="form-field">
-            <label for="reg-phone">Téléphone (optionnel pour alertes retrait)</label>
-            <input type="tel" id="reg-phone" name="phone" autocomplete="tel" placeholder="06 12 34 56 78" />
+            <label for="reg-phone">Téléphone portable *</label>
+            <input type="tel" id="reg-phone" name="phone" required autocomplete="tel" placeholder="06 12 34 56 78" />
           </div>
           <div class="form-row-2">
             <div class="form-field">

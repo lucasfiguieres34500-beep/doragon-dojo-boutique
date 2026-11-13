@@ -58,6 +58,14 @@
     summarySubtotal: document.getElementById('summary-subtotal'),
     checkoutMiniTotal: document.getElementById('checkout-mini-total'),
     reservationAmountText: document.getElementById('reservation-amount-text'),
+    checkoutLoggedUserBox: document.getElementById('checkout-logged-user-box'),
+    checkoutGuestBox: document.getElementById('checkout-guest-box'),
+    checkoutMemberAvatar: document.getElementById('checkout-member-avatar'),
+    checkoutMemberNameLabel: document.getElementById('checkout-member-name-label'),
+    checkoutMemberPhoneLabel: document.getElementById('checkout-member-phone-label'),
+    btnSwitchAccountCheckout: document.getElementById('btn-switch-account-checkout'),
+    btnCheckoutLogin: document.getElementById('btn-checkout-login'),
+    btnCheckoutRegister: document.getElementById('btn-checkout-register'),
     cartItemsList: document.getElementById('cart-items-list'),
     cartTotal: document.getElementById('cart-total'),
     browseFromEmptyBtn: document.getElementById('browse-from-empty-btn'),
@@ -731,8 +739,12 @@
     if (lines.length === 0) return;
 
     const formData = new FormData(els.checkoutForm);
-    const memberName = String(formData.get('memberName') || '').trim();
-    const memberPhone = String(formData.get('memberPhone') || '').trim();
+    const memberName = state.member
+      ? state.member.name
+      : String(formData.get('memberName') || '').trim();
+    const memberPhone = state.member
+      ? (state.member.phone || String(formData.get('memberPhone') || '').trim())
+      : String(formData.get('memberPhone') || '').trim();
     const memberEmail = state.member ? (state.member.email || '') : '';
     const memberNote = String(formData.get('memberNote') || '').trim();
 
@@ -924,6 +936,43 @@
         ? `https://wa.me/${cleanPhone}?text=${encodedText}`
         : `https://wa.me/?text=${encodedText}`;
     }
+
+    // Déclenchement de l'animation de célébration fluide
+    triggerConfirmationCelebration();
+  }
+
+  function triggerConfirmationCelebration() {
+    if (prefersReducedMotion()) return;
+    const headBox = document.querySelector('.confirm-head-box');
+    if (!headBox) return;
+
+    const colors = ['#e5b24c', '#22c55e', '#ffffff', '#f59e0b', '#34d399'];
+    const count = 30;
+
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('div');
+      p.className = 'celebration-particle';
+
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+      const distance = 45 + Math.random() * 95;
+      const tx = Math.cos(angle) * distance;
+      const ty = Math.sin(angle) * distance - 15;
+      const size = 5 + Math.random() * 6;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const rot = (Math.random() - 0.5) * 600;
+
+      p.style.width = `${size}px`;
+      p.style.height = `${size}px`;
+      p.style.backgroundColor = color;
+      p.style.setProperty('--tx', `${tx}px`);
+      p.style.setProperty('--ty', `${ty}px`);
+      p.style.setProperty('--rot', `${rot}deg`);
+      p.style.left = '50%';
+      p.style.top = '35px';
+
+      headBox.appendChild(p);
+      setTimeout(() => p.remove(), 1250);
+    }
   }
 
   
@@ -957,15 +1006,36 @@
       if (els.profRashguardSize) els.profRashguardSize.value = state.member.favoriteRashguardSize || '';
       if (els.profGlovesSize) els.profGlovesSize.value = state.member.favoriteGlovesSize || '';
 
-      // Auto-fill checkout fields if empty
+      // Synchronisation avec les champs de commande
       const nameInput = document.getElementById('member-name');
       const phoneInput = document.getElementById('member-phone');
-      if (nameInput && !nameInput.value) nameInput.value = state.member.name;
-      if (phoneInput && state.member.phone && !phoneInput.value) phoneInput.value = state.member.phone;
+      if (nameInput) {
+        nameInput.value = state.member.name;
+        nameInput.removeAttribute('required');
+      }
+      if (phoneInput) {
+        phoneInput.value = state.member.phone || '';
+        phoneInput.removeAttribute('required');
+      }
+
+      // Affichage de la carte adhérent dans la caisse (aucun formulaire à remplir)
+      if (els.checkoutLoggedUserBox) els.checkoutLoggedUserBox.hidden = false;
+      if (els.checkoutGuestBox) els.checkoutGuestBox.hidden = true;
+      if (els.checkoutMemberAvatar) els.checkoutMemberAvatar.textContent = initials;
+      if (els.checkoutMemberNameLabel) els.checkoutMemberNameLabel.textContent = state.member.name;
+      if (els.checkoutMemberPhoneLabel) els.checkoutMemberPhoneLabel.textContent = `📱 ${state.member.phone || 'Adhérent Club'}`;
     } else {
       els.accountBtn.classList.remove('is-logged');
       els.accountBtnLabel.textContent = 'Espace Adhérent';
       els.accountBtnAvatar.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>`;
+
+      // Si déconnecté, afficher le bloc invité/connexion
+      if (els.checkoutLoggedUserBox) els.checkoutLoggedUserBox.hidden = true;
+      if (els.checkoutGuestBox) els.checkoutGuestBox.hidden = false;
+      const nameInput = document.getElementById('member-name');
+      const phoneInput = document.getElementById('member-phone');
+      if (nameInput) nameInput.setAttribute('required', '');
+      if (phoneInput) phoneInput.setAttribute('required', '');
     }
     renderCartMemberBanner();
   }
@@ -1487,6 +1557,16 @@
         state.cartStep = 'items';
         renderCart();
       });
+    }
+
+    if (els.btnSwitchAccountCheckout) {
+      els.btnSwitchAccountCheckout.addEventListener('click', () => openAccountModal('profile'));
+    }
+    if (els.btnCheckoutLogin) {
+      els.btnCheckoutLogin.addEventListener('click', () => openAccountModal('login'));
+    }
+    if (els.btnCheckoutRegister) {
+      els.btnCheckoutRegister.addEventListener('click', () => openAccountModal('register'));
     }
 
     els.checkoutForm.addEventListener('submit', handleCheckoutSubmit);
