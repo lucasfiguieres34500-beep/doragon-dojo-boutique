@@ -3267,6 +3267,61 @@ select option {
   animation: fadeIn 0.2s ease;
 }
 
+/* Stripe In-Page Elements Styling */
+.stripe-inpage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stripe-badge-secure {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.stripe-element-container {
+  min-height: 160px;
+  background: rgba(7, 19, 38, 0.6);
+  border: 1px solid rgba(229, 178, 76, 0.2);
+  border-radius: 10px;
+  padding: 0.85rem;
+  transition: border-color 0.2s ease;
+}
+
+.stripe-element-container:focus-within {
+  border-color: rgba(229, 178, 76, 0.5);
+}
+
+.stripe-loading-skeleton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 140px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.payment-error-message {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 8px;
+  color: #fca5a5;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
 /* Badge Stripe Professionnel */
 .stripe-badge-box {
   display: flex;

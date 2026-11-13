@@ -37,6 +37,14 @@
     authOrigin: 'header'
   };
 
+  let stripeInstance = null;
+  let stripeElementsInstance = null;
+  let stripePaymentElement = null;
+  let currentPaymentIntentRef = null;
+  let currentPaymentIntentSecret = null;
+  let stripeLoading = false;
+  let mountedTotal = 0;
+
   const els = {
     landingView: document.getElementById('landing-view'),
     shopView: document.getElementById('shop-view'),
@@ -604,6 +612,125 @@
     return { totalCount, totalPrice, lines };
   }
 
+  async function initStripePaymentElement() {
+    const radioClub = document.querySelector('input[name="paymentOption"][value="club"]');
+    if (radioClub && radioClub.checked) return;
+    if (stripeLoading) return;
+
+    const { lines, totalPrice } = computeCartDetails();
+    if (lines.length === 0) return;
+
+    const container = document.getElementById('stripe-payment-element');
+    if (!container) return;
+
+    // Si déjà monté pour le même montant, ne pas recréer
+    if (stripePaymentElement && currentPaymentIntentSecret && mountedTotal === totalPrice) {
+      return;
+    }
+
+    if (typeof window.Stripe !== 'function') {
+      container.innerHTML = `
+        <div class="stripe-loading-skeleton">
+          <div class="spinner-sm"></div>
+          <span>Connexion à la passerelle sécurisée Stripe...</span>
+        </div>
+      `;
+      setTimeout(initStripePaymentElement, 400);
+      return;
+    }
+
+    stripeLoading = true;
+    try {
+      const res = await fetch('/api/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: lines.map(({ product, size, qty, lineTotal }) => ({
+            id: product.id,
+            name: product.name,
+            size,
+            qty,
+            lineTotal
+          })),
+          memberName: (document.getElementById('member-name')?.value || '').trim() || (state.member?.name || ''),
+          memberEmail: (document.getElementById('member-email')?.value || '').trim() || (state.member?.email || ''),
+          memberPhone: (document.getElementById('member-phone')?.value || '').trim() || (state.member?.phone || '')
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.ok || !data.clientSecret) {
+        container.innerHTML = `
+          <div class="payment-error-message">
+            ${escapeHtml(data.error || 'Erreur lors de l\'initialisation du paiement.')}
+          </div>
+        `;
+        stripeLoading = false;
+        return;
+      }
+
+      currentPaymentIntentSecret = data.clientSecret;
+      currentPaymentIntentRef = data.ref;
+      mountedTotal = totalPrice;
+
+      if (!stripeInstance) {
+        stripeInstance = window.Stripe(data.publishableKey);
+      }
+
+      stripeElementsInstance = stripeInstance.elements({
+        clientSecret: data.clientSecret,
+        appearance: {
+          theme: 'night',
+          variables: {
+            colorPrimary: '#e5b24c',
+            colorBackground: '#0c1e3d',
+            colorText: '#f1f5f9',
+            colorDanger: '#ef4444',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            borderRadius: '10px',
+            spacingUnit: '4px'
+          },
+          rules: {
+            '.Tab': {
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              backgroundColor: '#071326'
+            },
+            '.Tab:hover': {
+              border: '1px solid #e5b24c'
+            },
+            '.Tab--selected': {
+              borderColor: '#e5b24c',
+              backgroundColor: 'rgba(229, 178, 76, 0.12)'
+            },
+            '.Input': {
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              backgroundColor: '#071326'
+            },
+            '.Input:focus': {
+              border: '1px solid #e5b24c',
+              boxShadow: '0 0 0 1px #e5b24c'
+            }
+          }
+        }
+      });
+
+      stripePaymentElement = stripeElementsInstance.create('payment', {
+        layout: 'tabs'
+      });
+
+      container.innerHTML = '';
+      stripePaymentElement.mount('#stripe-payment-element');
+    } catch (err) {
+      container.innerHTML = `
+        <div class="payment-error-message">
+          Impossible de charger le formulaire de paiement.
+        </div>
+      `;
+    } finally {
+      stripeLoading = false;
+    }
+  }
+
   function renderCart() {
     const { totalCount, totalPrice, lines } = computeCartDetails();
     const step = state.lastOrder && lines.length === 0 ? 'confirmation' : state.cartStep;
@@ -647,6 +774,7 @@
       if (els.cartStepItems) els.cartStepItems.hidden = true;
       if (els.cartStepCheckout) els.cartStepCheckout.hidden = false;
       els.drawerTitle.textContent = 'Caisse & Paiement';
+      initStripePaymentElement();
     } else {
       if (els.cartStepItems) els.cartStepItems.hidden = false;
       if (els.cartStepCheckout) els.cartStepCheckout.hidden = true;
@@ -944,61 +1072,128 @@
     }
 
     if (!isClub) {
-      // --- PAIEMENT EN LIGNE SÉCURISÉ VIA STRIPE ---
+      if (!stripeInstance || !stripeElementsInstance || !currentPaymentIntentSecret) {
+        showToast('Chargement du module bancaire sécurisé en cours...');
+        return;
+      }
+
       els.submitOrderBtn.disabled = true;
       const labelSpan = document.getElementById('submit-order-btn-label');
-      if (labelSpan) labelSpan.textContent = 'Redirection vers Stripe...';
+      if (labelSpan) labelSpan.textContent = 'Paiement en cours...';
 
-      const stripePayload = {
-        memberName,
-        memberEmail,
-        memberPhone,
-        memberNote,
-        total: totalPrice,
-        memberId: state.member ? state.member.id : null,
-        items: lines.map(({ product, size, qty, lineTotal }) => ({
-          id: product.id,
-          name: product.name,
-          size,
-          qty,
-          lineTotal
-        }))
-      };
+      const errorEl = document.getElementById('payment-element-message');
+      if (errorEl) {
+        errorEl.hidden = true;
+        errorEl.textContent = '';
+      }
 
       try {
-        const res = await fetch('/api/create-checkout-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(stripePayload)
+        const { error, paymentIntent } = await stripeInstance.confirmPayment({
+          elements: stripeElementsInstance,
+          confirmParams: {
+            payment_method_data: {
+              billing_details: {
+                name: memberName,
+                email: memberEmail || undefined,
+                phone: memberPhone || undefined
+              }
+            }
+          },
+          redirect: 'if_required'
         });
-        const data = await res.json();
 
-        if (res.status === 409) {
-          if (data.stock) {
-            state.stock = normalizeStock(data.stock);
-            saveJson(STORAGE_KEYS.STOCK, state.stock);
-            renderProducts();
+        if (error) {
+          els.submitOrderBtn.disabled = false;
+          updateSubmitOrderBtnUi(totalPrice);
+          if (errorEl) {
+            errorEl.hidden = false;
+            errorEl.textContent = error.message || 'Paiement refusé par votre banque.';
           }
-          els.submitOrderBtn.disabled = false;
-          updateSubmitOrderBtnUi(totalPrice);
-          showToast(data.error || 'Stock insuffisant pour certains articles.');
+          showToast(error.message || 'Paiement refusé.');
           return;
         }
 
-        if (!res.ok || !data.ok || !data.url) {
+        if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing')) {
+          const confirmRes = await fetch('/api/confirm-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              paymentIntentId: paymentIntent.id,
+              ref: currentPaymentIntentRef,
+              memberName,
+              memberEmail,
+              memberPhone,
+              memberNote,
+              total: totalPrice,
+              items: lines.map(({ product, size, qty, lineTotal }) => ({
+                id: product.id,
+                name: product.name,
+                size,
+                qty,
+                lineTotal
+              }))
+            })
+          });
+
+          const confirmData = await confirmRes.json();
+          const finalOrder = (confirmData && confirmData.order) ? confirmData.order : {
+            ref: currentPaymentIntentRef || `CLUB-${Math.floor(1000 + Math.random() * 9000)}`,
+            createdAt: new Date().toISOString(),
+            dateLabel: new Date().toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }),
+            memberName,
+            memberEmail,
+            memberPhone,
+            paymentMethod: 'Paiement en ligne par Carte Bancaire (Stripe)',
+            paymentStatus: 'Payé en ligne (Stripe CB)',
+            memberNote,
+            total: totalPrice,
+            items: lines.map(({ product, size, qty, lineTotal }) => ({
+              id: product.id,
+              name: product.name,
+              size,
+              qty,
+              lineTotal
+            }))
+          };
+
+          if (confirmData && confirmData.stock) {
+            state.stock = normalizeStock(confirmData.stock);
+            saveJson(STORAGE_KEYS.STOCK, state.stock);
+          } else {
+            lines.forEach((item) => {
+              if (state.stock[item.id] && typeof state.stock[item.id][item.size] === 'number') {
+                state.stock[item.id][item.size] = Math.max(0, state.stock[item.id][item.size] - item.qty);
+              }
+            });
+            saveJson(STORAGE_KEYS.STOCK, state.stock);
+          }
+
           els.submitOrderBtn.disabled = false;
           updateSubmitOrderBtnUi(totalPrice);
-          showToast(data.error || 'Impossible d\'initialiser le paiement sécurisé Stripe.');
+
+          state.orders.unshift(finalOrder);
+          if (state.member) { state.memberOrders.unshift(finalOrder); }
+          saveJson(STORAGE_KEYS.ORDERS, state.orders);
+          state.lastOrder = finalOrder;
+          state.cart = [];
+          saveJson(STORAGE_KEYS.CART, []);
+          els.checkoutForm.reset();
+
+          stripePaymentElement = null;
+          stripeElementsInstance = null;
+          currentPaymentIntentSecret = null;
+          mountedTotal = 0;
+
+          displayOrderConfirmation(finalOrder);
+          renderProducts();
+          renderCart();
+          showToast('Paiement réussi ! Merci pour votre commande.');
           return;
         }
-
-        // Redirection instantanée vers Stripe Checkout
-        window.location.href = data.url;
-        return;
       } catch (err) {
         els.submitOrderBtn.disabled = false;
         updateSubmitOrderBtnUi(totalPrice);
-        showToast('Erreur de connexion avec le serveur de paiement.');
+        showToast('Erreur lors du traitement bancaire.');
         return;
       }
     }
@@ -1872,6 +2067,7 @@
         if (panelClub) panelClub.hidden = true;
         if (btnLabel) btnLabel.textContent = 'Payer en ligne';
         if (reassuranceText) reassuranceText.textContent = 'Paiement par carte bancaire sécurisé. Vos équipements sont préparés au dojo.';
+        initStripePaymentElement();
       } else {
         if (labelClub) labelClub.classList.add('is-active');
         if (labelOnline) labelOnline.classList.remove('is-active');
