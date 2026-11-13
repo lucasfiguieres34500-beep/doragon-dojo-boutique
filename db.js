@@ -407,24 +407,15 @@ async function getProducts() {
             category: cat,
             categoryLabel: cat === 'gants' ? 'Gants MMA' : 'Rashguard',
             price: Number(row.price) || defaultProd.price || (cat === 'gants' ? 50 : 40),
-            image: row.image || defaultProd.image || (cat === 'gants' ? 'assets/gants-mma.jpg' : 'assets/rashguard-luta-livre.jpg'),
-            description: row.description || defaultProd.shortDesc || defaultProd.description || '',
-            shortDesc: row.description || defaultProd.shortDesc || (cat === 'gants' ? 'Gants officiels sparring & grappling.' : 'Tenue de compression officielle.'),
-            badge: row.badge || defaultProd.badge || (cat === 'gants' ? 'Équipement Pro' : 'Édition Club'),
+            image: defaultProd.image || row.image || (cat === 'gants' ? 'assets/gants-mma.jpg' : 'assets/rashguard-mc-front-white.jpg'),
+            images: defaultProd.images || [{ src: defaultProd.image || row.image, label: 'Face' }],
+            description: '',
+            shortDesc: '',
+            badge: '',
             sizeLabel: 'Taille',
             sizes,
             defaultSize: defaultProd.defaultSize || sizes[0],
-            specs: defaultProd.specs || (cat === 'gants'
-              ? [
-                  'Paume ouverte et pouce articulé pour saisies et soumissions',
-                  'Rembourrage mousse haute densité préformé sur les métacarpes',
-                  'Fermeture poignet par large bande velcro renforcée'
-                ]
-              : [
-                  'Tissu compression 4-way stretch respirant et ultra-résistant',
-                  'Impression intégrale par sublimation inaltérable (face, dos, manches)',
-                  'Coutures plates renforcées anti-frottements pour le combat'
-                ])
+            specs: defaultProd.specs || []
           };
         });
       }

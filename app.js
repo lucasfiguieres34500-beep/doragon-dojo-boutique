@@ -300,12 +300,10 @@
         `;
       }).join('');
 
-      const badgeText = product.badge || (product.category === 'gants' ? 'Équipement Pro' : 'Édition Club');
       return `
         <article class="product-card" data-product-id="${product.id}" style="--card-index:${index};">
           <div class="product-media" data-action="open-details" data-product-id="${product.id}">
             <img src="${product.image}" alt="${escapeHtml(product.name)}" loading="lazy" />
-            <span class="product-badge">${escapeHtml(badgeText)}</span>
           </div>
           <div class="product-body">
             <div class="product-top-row">
@@ -607,43 +605,60 @@
       `;
     }).join('');
 
-    const badgeText = product.badge || (product.category === 'gants' ? 'Équipement Pro' : 'Édition Club');
-    const specsList = Array.isArray(product.specs) && product.specs.length
-      ? product.specs
-      : (product.category === 'gants'
+    const galleryImages = Array.isArray(product.images) && product.images.length > 0
+      ? product.images
+      : (product.id === 'rashguard-mc'
           ? [
-              'Paume ouverte et pouce articulé pour saisies et soumissions',
-              'Mousse haute densité injectée sur les zones d\'impact',
-              'Fermeture poignet par large bande velcro renforcée'
+              { src: 'assets/rashguard-mc-front-white.jpg', label: 'Face' },
+              { src: 'assets/rashguard-mc-back-white.jpg', label: 'Dos' },
+              { src: 'assets/rashguard-luta-livre.jpg', label: 'Vue 360°' }
             ]
-          : [
-              'Tissu compression 4-way stretch respirant et ultra-résistant',
-              'Impression intégrale par sublimation inaltérable (face, dos, manches)',
-              'Coutures plates renforcées anti-frottements pour le combat'
-            ]);
+          : product.id === 'rashguard-camo'
+            ? [
+                { src: 'assets/rashguard-camo-front-white.jpg', label: 'Face' },
+                { src: 'assets/rashguard-camo-back-white.jpg', label: 'Dos' },
+                { src: 'assets/rashguard-camo.jpg', label: 'Vue 360°' }
+              ]
+            : [
+                { src: product.image || 'assets/gants-mma.jpg', label: 'Face' }
+              ]);
+
+    let activeImageIndex = 0;
 
     els.productModalContent.innerHTML = `
       <div class="product-modal-grid">
         <div class="product-modal-gallery">
-          <div class="product-modal-img-wrap">
-            <img src="${product.image}" alt="${escapeHtml(product.name)}" class="product-modal-img" id="modal-product-img" />
+          <div class="product-gallery-viewport" id="modal-gallery-viewport">
+            <div class="product-gallery-track" id="modal-gallery-track">
+              ${galleryImages.map((img, i) => `
+                <div class="product-gallery-slide ${i === 0 ? 'is-active' : ''}" data-slide-index="${i}">
+                  <img src="${img.src}" alt="${escapeHtml(product.name)} - ${escapeHtml(img.label)}" class="product-modal-img" />
+                </div>
+              `).join('')}
+            </div>
+            ${galleryImages.length > 1 ? `
+              <button type="button" class="gallery-arrow gallery-prev" id="gallery-prev-btn" aria-label="Image précédente">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <button type="button" class="gallery-arrow gallery-next" id="gallery-next-btn" aria-label="Image suivante">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+              <div class="gallery-counter" id="gallery-counter">1 / ${galleryImages.length}</div>
+            ` : ''}
           </div>
+          ${galleryImages.length > 1 ? `
+            <div class="gallery-nav-pills" id="gallery-nav-pills">
+              ${galleryImages.map((img, i) => `
+                <button type="button" class="gallery-pill-btn ${i === 0 ? 'is-active' : ''}" data-target-slide="${i}">
+                  <span>${escapeHtml(img.label)}</span>
+                </button>
+              `).join('')}
+            </div>
+          ` : ''}
         </div>
         <div class="product-modal-info">
-          <div class="product-modal-badge">${escapeHtml(badgeText)}</div>
           <h2 id="modal-product-title" class="product-modal-heading">${escapeHtml(product.name)}</h2>
           <div class="product-modal-price">${formatEuro(product.price)}</div>
-
-          <p class="product-modal-desc">${escapeHtml(product.shortDesc || product.description || '')}</p>
-
-          <ul class="product-modal-specs">
-            ${specsList.map((spec) => `
-              <li>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="spec-check-icon"><polyline points="20 6 9 17 4 12"/></svg>
-                <span>${escapeHtml(spec)}</span>
-              </li>
-            `).join('')}
-          </ul>
 
           <div class="size-picker-label">
             <span>Taille sélectionnée : <strong id="modal-size-text">${escapeHtml(modalSize)}</strong></span>
@@ -659,6 +674,66 @@
         </div>
       </div>
     `;
+
+    const track = document.getElementById('modal-gallery-track');
+    const prevBtn = document.getElementById('gallery-prev-btn');
+    const nextBtn = document.getElementById('gallery-next-btn');
+    const counter = document.getElementById('gallery-counter');
+    const pills = document.querySelectorAll('.gallery-pill-btn');
+    const viewport = document.getElementById('modal-gallery-viewport');
+
+    function updateGallery(index) {
+      if (galleryImages.length <= 1) return;
+      activeImageIndex = (index + galleryImages.length) % galleryImages.length;
+      if (track) {
+        track.style.transform = `translateX(-${activeImageIndex * 100}%)`;
+      }
+      if (counter) {
+        counter.textContent = `${activeImageIndex + 1} / ${galleryImages.length}`;
+      }
+      pills.forEach((p, idx) => {
+        p.classList.toggle('is-active', idx === activeImageIndex);
+      });
+    }
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        updateGallery(activeImageIndex - 1);
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        updateGallery(activeImageIndex + 1);
+      });
+    }
+
+    pills.forEach((pill) => {
+      pill.addEventListener('click', () => {
+        const target = Number(pill.dataset.targetSlide);
+        if (!isNaN(target)) updateGallery(target);
+      });
+    });
+
+    if (viewport && galleryImages.length > 1) {
+      let touchStartX = 0;
+      let touchStartY = 0;
+      viewport.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }, { passive: true });
+
+      viewport.addEventListener('touchend', (e) => {
+        const deltaX = e.changedTouches[0].clientX - touchStartX;
+        const deltaY = e.changedTouches[0].clientY - touchStartY;
+        if (Math.abs(deltaX) > 35 && Math.abs(deltaX) > Math.abs(deltaY)) {
+          if (deltaX < 0) updateGallery(activeImageIndex + 1);
+          else updateGallery(activeImageIndex - 1);
+        }
+      }, { passive: true });
+    }
 
     const pillsWrap = document.getElementById('modal-size-pills');
     const modalAddBtn = document.getElementById('modal-add-btn');

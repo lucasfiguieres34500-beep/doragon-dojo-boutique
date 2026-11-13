@@ -15,9 +15,15 @@
       categoryLabel: 'Rashguard',
       name: 'Rashguard Édition Luta Livre',
       price: 40,
-      image: 'assets/rashguard-luta-livre.jpg',
-      badge: 'Édition Club',
-      shortDesc: 'Tenue de compression officielle Luta Livre & Grappling · Soleil levant, Mont Fuji et dragon.',
+      image: 'assets/rashguard-mc-front-white.jpg',
+      images: [
+        { src: 'assets/rashguard-mc-front-white.jpg', label: 'Face' },
+        { src: 'assets/rashguard-mc-back-white.jpg', label: 'Dos' },
+        { src: 'assets/rashguard-luta-livre.jpg', label: 'Vue 360°' }
+      ],
+      badge: '',
+      shortDesc: '',
+      description: '',
       sizeLabel: 'Taille',
       sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
       defaultSize: 'M',
@@ -33,9 +39,15 @@
       categoryLabel: 'Rashguard',
       name: 'Rashguard Édition Camo Wave',
       price: 40,
-      image: 'assets/rashguard-camo.jpg',
-      badge: 'Édition Club',
-      shortDesc: 'Design artistique dynamique rouge et bleu marine · Idéal pour le grappling et l\'entraînement.',
+      image: 'assets/rashguard-camo-front-white.jpg',
+      images: [
+        { src: 'assets/rashguard-camo-front-white.jpg', label: 'Face' },
+        { src: 'assets/rashguard-camo-back-white.jpg', label: 'Dos' },
+        { src: 'assets/rashguard-camo.jpg', label: 'Vue 360°' }
+      ],
+      badge: '',
+      shortDesc: '',
+      description: '',
       sizeLabel: 'Taille',
       sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
       defaultSize: 'M',
@@ -52,8 +64,12 @@
       name: 'Gants MMA / Grappling',
       price: 50,
       image: 'assets/gants-mma.jpg',
-      badge: 'Équipement Pro',
-      shortDesc: 'Gants de combat et grappling préformés · Liberté de préhension et absorption des chocs.',
+      images: [
+        { src: 'assets/gants-mma.jpg', label: 'Face' }
+      ],
+      badge: '',
+      shortDesc: '',
+      description: '',
       sizeLabel: 'Taille',
       sizes: ['S/M', 'L/XL'],
       defaultSize: 'S/M',
@@ -102,6 +118,6 @@
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = exported;
   } else {
-    root.CLUB_CATALOG = exported;
+    root.ClubCatalog = exported;
   }
-})(typeof globalThis !== 'undefined' ? globalThis : window);
+})(typeof window !== 'undefined' ? window : globalThis);
