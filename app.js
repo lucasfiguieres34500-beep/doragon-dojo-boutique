@@ -59,13 +59,15 @@
     checkoutMiniTotal: document.getElementById('checkout-mini-total'),
     reservationAmountText: document.getElementById('reservation-amount-text'),
     checkoutLoggedUserBox: document.getElementById('checkout-logged-user-box'),
-    checkoutGuestBox: document.getElementById('checkout-guest-box'),
+    checkoutAuthRequiredBox: document.getElementById('checkout-auth-required-box'),
+    checkoutPaymentSection: document.getElementById('checkout-payment-section'),
     checkoutMemberAvatar: document.getElementById('checkout-member-avatar'),
     checkoutMemberNameLabel: document.getElementById('checkout-member-name-label'),
     checkoutMemberPhoneLabel: document.getElementById('checkout-member-phone-label'),
     btnSwitchAccountCheckout: document.getElementById('btn-switch-account-checkout'),
     btnCheckoutLogin: document.getElementById('btn-checkout-login'),
     btnCheckoutRegister: document.getElementById('btn-checkout-register'),
+    btnGotoAccountReceipts: document.getElementById('btn-goto-account-receipts'),
     cartItemsList: document.getElementById('cart-items-list'),
     cartTotal: document.getElementById('cart-total'),
     browseFromEmptyBtn: document.getElementById('browse-from-empty-btn'),
@@ -1018,9 +1020,10 @@
         phoneInput.removeAttribute('required');
       }
 
-      // Affichage de la carte adhérent dans la caisse (aucun formulaire à remplir)
+      // Affichage de la carte adhérent dans la caisse
       if (els.checkoutLoggedUserBox) els.checkoutLoggedUserBox.hidden = false;
-      if (els.checkoutGuestBox) els.checkoutGuestBox.hidden = true;
+      if (els.checkoutAuthRequiredBox) els.checkoutAuthRequiredBox.hidden = true;
+      if (els.checkoutPaymentSection) els.checkoutPaymentSection.hidden = false;
       if (els.checkoutMemberAvatar) els.checkoutMemberAvatar.textContent = initials;
       if (els.checkoutMemberNameLabel) els.checkoutMemberNameLabel.textContent = state.member.name;
       if (els.checkoutMemberPhoneLabel) els.checkoutMemberPhoneLabel.textContent = `📱 ${state.member.phone || 'Adhérent Club'}`;
@@ -1029,13 +1032,14 @@
       els.accountBtnLabel.textContent = 'Espace Adhérent';
       els.accountBtnAvatar.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>`;
 
-      // Si déconnecté, afficher le bloc invité/connexion
+      // Si déconnecté, afficher le bloc compte obligatoire et masquer le paiement direct
       if (els.checkoutLoggedUserBox) els.checkoutLoggedUserBox.hidden = true;
-      if (els.checkoutGuestBox) els.checkoutGuestBox.hidden = false;
+      if (els.checkoutAuthRequiredBox) els.checkoutAuthRequiredBox.hidden = false;
+      if (els.checkoutPaymentSection) els.checkoutPaymentSection.hidden = true;
       const nameInput = document.getElementById('member-name');
       const phoneInput = document.getElementById('member-phone');
-      if (nameInput) nameInput.setAttribute('required', '');
-      if (phoneInput) phoneInput.setAttribute('required', '');
+      if (nameInput) nameInput.value = '';
+      if (phoneInput) phoneInput.value = '';
     }
     renderCartMemberBanner();
   }
@@ -1094,8 +1098,10 @@
     if (!state.memberOrders || state.memberOrders.length === 0) {
       els.memberOrdersContainer.innerHTML = `
         <div class="member-order-empty">
-          <p>Aucune commande enregistrée pour le moment.</p>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-browse-from-account">Découvrir les équipements</button>
+          <div style="font-size:2rem;margin-bottom:0.5rem;">🥋</div>
+          <p><strong>Aucune commande enregistrée</strong></p>
+          <p style="font-size:0.85rem;color:rgba(255,255,255,0.7);margin-bottom:1rem;">Dès que vous passez commande, votre reçu officiel PDF avec numéro légal sera centralisé ici.</p>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-browse-from-account">Découvrir les équipements</button>
         </div>
       `;
       const browseBtn = document.getElementById('btn-browse-from-account');
@@ -1108,10 +1114,19 @@
       return;
     }
 
-    els.memberOrdersContainer.innerHTML = state.memberOrders.map((order) => {
-      const itemsSummary = (order.items || []).map((it) => `${it.qty}× ${escapeHtml(it.name)} (${escapeHtml(it.size)})`).join(' · ');
+    const headerNotice = `
+      <div class="account-central-receipts-notice">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <div>
+          <strong>Reçus Officiels Centralisés</strong>
+          <p>Tous vos reçus PDF avec numéro de commande légal sont sauvegardés ici à vie. Vous pouvez les télécharger ou les présenter sur smartphone lors du retrait.</p>
+        </div>
+      </div>
+    `;
+
+    const ordersHtml = state.memberOrders.map((order) => {
       const isOnline = (order.paymentMethod || '').toLowerCase().includes('en ligne');
-      const statusLabel = isOnline ? 'Payé CB (En ligne)' : 'À régler au club';
+      const statusLabel = isOnline ? '✓ Payé CB (En ligne)' : '⚠️ Réservation (À régler au dojo)';
       const statusClass = isOnline ? 'is-paid' : 'is-reserved';
 
       return `
@@ -1123,17 +1138,33 @@
             </div>
             <span class="member-order-date">${escapeHtml(order.dateLabel || (order.createdAt ? new Date(order.createdAt).toLocaleDateString('fr-FR') : ''))}</span>
           </div>
-          <div class="member-order-items">${itemsSummary}</div>
+
+          <div class="member-order-items-list">
+            ${(order.items || []).map((it) => `
+              <div class="member-order-item-row">
+                <span class="item-name">${escapeHtml(it.name)}</span>
+                <span class="item-size-pill">Taille ${escapeHtml(it.size)}</span>
+                <span class="item-qty">Qté ${it.qty}</span>
+                <strong class="item-price">${formatEuro(it.lineTotal || (it.price * it.qty))}</strong>
+              </div>
+            `).join('')}
+          </div>
+
           <div class="member-order-footer">
-            <span class="member-order-total">${formatEuro(order.total || 0)}</span>
-            <button type="button" class="btn btn-secondary btn-sm btn-receipt-pdf" data-order-ref="${escapeHtml(order.ref)}">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              <span>Reçu PDF</span>
+            <div class="member-order-total-wrap">
+              <span class="total-label">Total :</span>
+              <strong class="member-order-total">${formatEuro(order.total || 0)}</strong>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm btn-receipt-pdf" data-order-ref="${escapeHtml(order.ref)}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <span>Télécharger mon reçu PDF</span>
             </button>
           </div>
         </div>
       `;
     }).join('');
+
+    els.memberOrdersContainer.innerHTML = headerNotice + ordersHtml;
   }
 
   function generateReceiptPdf(order) {
@@ -1368,6 +1399,11 @@
       applyMemberPreferences();
       showToast(`Bienvenue ${state.member.name} !`);
       closeAccountModal();
+      if (state.cart && state.cart.length > 0) {
+        state.cartStep = 'checkout';
+        renderCart();
+        openCartDrawer();
+      }
     } catch {
       btn.disabled = false;
       btn.textContent = 'Se connecter';
@@ -1420,6 +1456,11 @@
       applyMemberPreferences();
       showToast('Votre compte adhérent a été créé avec succès !');
       closeAccountModal();
+      if (state.cart && state.cart.length > 0) {
+        state.cartStep = 'checkout';
+        renderCart();
+        openCartDrawer();
+      }
     } catch {
       btn.disabled = false;
       btn.textContent = 'Créer mon compte';
@@ -1545,10 +1586,20 @@
 
     if (els.btnGotoCheckout) {
       els.btnGotoCheckout.addEventListener('click', () => {
+        if (!state.member) {
+          openAccountModal('register');
+          showToast('Compte adhérent requis pour commander.');
+          return;
+        }
         state.cartStep = 'checkout';
         renderCart();
-        const nameInput = document.getElementById('member-name');
-        if (nameInput) nameInput.focus();
+      });
+    }
+
+    if (els.btnGotoAccountReceipts) {
+      els.btnGotoAccountReceipts.addEventListener('click', () => {
+        closeCartDrawer();
+        openAccountModal('orders');
       });
     }
 

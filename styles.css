@@ -2679,29 +2679,116 @@ select option {
 .btn-receipt-pdf {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  background: rgba(229, 178, 76, 0.14);
-  color: var(--club-gold);
-  border: 1px solid rgba(229, 178, 76, 0.35);
-  border-radius: 8px;
-  padding: 0.38rem 0.75rem;
-  font-size: 0.82rem;
-  font-weight: 700;
+  justify-content: center;
+  gap: 0.45rem;
+  background: linear-gradient(135deg, var(--club-gold), #b8860b);
+  color: #071326;
+  border: none;
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 800;
   cursor: pointer;
+  box-shadow: 0 3px 10px rgba(229, 178, 76, 0.3);
   transition: all 0.2s ease;
 }
 
 .btn-receipt-pdf:hover {
-  background: var(--club-gold);
-  color: #071326;
-  border-color: var(--club-gold);
+  filter: brightness(1.1);
   transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(229, 178, 76, 0.45);
+}
+
+.account-central-receipts-notice {
+  background: rgba(229, 178, 76, 0.1);
+  border: 1px solid rgba(229, 178, 76, 0.3);
+  border-radius: 12px;
+  padding: 0.95rem 1.1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  color: #ffffff;
+  margin-bottom: 1.25rem;
+  font-size: 0.82rem;
+}
+
+.account-central-receipts-notice svg {
+  color: var(--club-gold);
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+.account-central-receipts-notice strong {
+  display: block;
+  font-size: 0.92rem;
+  color: var(--club-gold);
+  margin-bottom: 0.25rem;
+}
+
+.account-central-receipts-notice p {
+  margin: 0;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.member-order-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.65rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  margin: 0.35rem 0;
+}
+
+.member-order-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  gap: 0.5rem;
+}
+
+.member-order-item-row .item-name {
+  flex: 1;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.member-order-item-row .item-size-pill {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.18rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.member-order-item-row .item-qty {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.member-order-item-row .item-price {
+  color: var(--club-gold);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.member-order-total-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.member-order-total-wrap .total-label {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .member-order-total {
-  font-weight: 700;
-  color: #ffffff;
-  font-size: 1rem;
+  font-weight: 800;
+  color: var(--club-gold);
+  font-size: 1.1rem;
 }
 
 .member-order-empty {
@@ -3462,68 +3549,59 @@ select option {
   gap: 0.35rem;
 }
 
-/* Bloc incitatif Invité / Non connecté */
-.checkout-guest-incentive {
-  background: rgba(229, 178, 76, 0.08);
-  border: 1px solid rgba(229, 178, 76, 0.25);
-  border-radius: 12px;
-  padding: 0.9rem 1rem;
-  margin-bottom: 1rem;
+/* ==========================================================================
+   BLOC COMPTE OBLIGATOIRE POUR ACHETER
+   ========================================================================== */
+
+.auth-required-card {
+  background: linear-gradient(135deg, rgba(16, 42, 77, 0.96), rgba(7, 19, 38, 0.98));
+  border: 1px solid rgba(229, 178, 76, 0.35);
+  border-radius: 16px;
+  padding: 1.5rem 1.25rem;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  margin-bottom: 1.25rem;
 }
 
-.guest-incentive-badge {
-  display: inline-block;
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: var(--club-gold);
-  margin-bottom: 0.25rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.guest-incentive-text {
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.85);
-  line-height: 1.35;
-  margin: 0 0 0.75rem;
-}
-
-.guest-incentive-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.btn-outline-gold {
-  background: transparent;
-  border: 1px solid var(--club-gold);
-  color: var(--club-gold);
-}
-
-.btn-outline-gold:hover {
-  background: var(--club-gold);
+.auth-required-icon-wrap {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e5b24c, #c9932a);
   color: #071326;
-}
-
-.guest-coords-divider {
   display: flex;
   align-items: center;
-  text-align: center;
-  margin: 1rem 0 0.85rem;
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  justify-content: center;
+  margin: 0 auto 0.95rem;
+  box-shadow: 0 4px 16px rgba(229, 178, 76, 0.45);
 }
 
-.guest-coords-divider::before,
-.guest-coords-divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+.auth-required-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 0.45rem;
+  letter-spacing: 0.02em;
 }
 
-.guest-coords-divider span {
-  padding: 0 0.65rem;
+.auth-required-desc {
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.5;
+  margin: 0 0 1.25rem;
+}
+
+.auth-required-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.auth-required-btns .btn {
+  width: 100%;
+  border-radius: 12px;
 }
 
 /* ==========================================================================
@@ -3579,41 +3657,68 @@ body {
   }
 
   .header-inner {
-    min-height: 54px;
-    padding: 0.45rem 0.85rem;
+    min-height: 52px;
+    padding: 0.4rem 0.75rem;
     gap: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .brand {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
   }
 
   .brand-logo {
     width: 32px;
     height: 32px;
+    flex-shrink: 0;
   }
 
   .brand-name {
-    font-size: 0.86rem;
+    font-size: 0.88rem;
     letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .brand-tag {
-    display: none; /* Allège la barre pour laisser la place aux boutons */
+    display: none !important;
   }
 
   .header-actions {
-    gap: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-shrink: 0;
+  }
+
+  /* Sur mobile : masquer les longs textes pour éviter tout chevauchement */
+  .account-trigger-label,
+  .cart-trigger-label {
+    display: none !important;
   }
 
   .account-trigger {
     padding: 0.45rem 0.65rem;
-    font-size: 0.78rem;
-    border-radius: 999px;
     min-height: 38px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .cart-trigger {
     padding: 0.45rem 0.75rem;
-    font-size: 0.8rem;
-    border-radius: 999px;
     min-height: 38px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
   }
 
   /* Vue Boutique Mobile */
@@ -3640,24 +3745,20 @@ body {
     margin: 0;
   }
 
-  .filter-segmented {
+  .segmented-control {
     display: flex;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    width: 100%;
     padding: 0.25rem;
     gap: 0.35rem;
-    scrollbar-width: none;
-  }
-
-  .filter-segmented::-webkit-scrollbar {
-    display: none;
   }
 
   .segmented-btn {
-    flex-shrink: 0;
-    padding: 0.55rem 0.85rem;
+    flex: 1;
+    text-align: center;
+    padding: 0.55rem 0.4rem;
     font-size: 0.82rem;
     min-height: 38px;
+    white-space: nowrap;
   }
 
   /* Grille des Produits Mobile */
@@ -3674,59 +3775,97 @@ body {
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
   }
 
-  .product-card-media {
-    height: 290px;
+  .product-media {
+    height: 280px;
+    width: 100%;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-radius: 15px 15px 0 0;
   }
 
-  .product-card-media img {
+  .product-media img {
+    max-width: 85%;
+    max-height: 85%;
     object-fit: contain;
-    padding: 1rem;
+    margin: auto;
   }
 
-  .product-card-body {
+  .product-body {
     padding: 1.15rem 1rem 1.25rem;
   }
 
   .product-title {
     font-size: 1.15rem;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.25rem;
   }
 
-  .product-price-tag {
+  .product-price {
     font-size: 1.25rem;
-    margin-bottom: 0.85rem;
+    font-weight: 800;
+    color: var(--club-gold);
   }
 
-  /* Sélecteur de Tailles Tactile */
-  .sizes-selector {
+  /* Sélecteur de Tailles Tactile sur Mobile */
+  .size-picker-label {
+    font-size: 0.82rem;
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .size-pills {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.45rem;
     margin-bottom: 1rem;
+    width: 100%;
   }
 
-  .size-btn {
+  .size-pill {
     min-width: 44px;
     height: 42px;
     font-size: 0.92rem;
     font-weight: 700;
     border-radius: 10px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     touch-action: manipulation;
   }
 
-  .product-actions-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
+  /* Actions du Produit en Pile Verticale sur Mobile (ZÉRO chevauchement) */
+  .product-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.6rem !important;
+    width: 100% !important;
+    margin-top: 0.65rem;
   }
 
-  .add-to-cart-btn {
-    height: 50px;
+  .product-actions .btn {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .product-actions .btn-add-cart {
+    min-height: 50px;
     font-size: 1rem;
+    font-weight: 700;
     border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .product-actions .btn-secondary {
+    min-height: 44px;
+    font-size: 0.9rem;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
