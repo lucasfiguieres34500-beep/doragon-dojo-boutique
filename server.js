@@ -8,6 +8,7 @@ loadEnv(path.join(__dirname, '.env'));
 
 const { PRODUCTS: DEFAULT_PRODUCTS, createDefaultStock, normalizeStock } = require('./catalog.js');
 const db = require('./db.js');
+const mailer = require('./mailer.js');
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -529,6 +530,9 @@ const server = http.createServer(async (req, res) => {
 
       await db.saveUser(newUser);
 
+      // Envoi du mail de bienvenue / confirmation de compte (en tâche de fond)
+      mailer.sendWelcomeEmail(newUser).catch((e) => console.error('[Mailer] Erreur welcome:', e.message));
+
       const cookie = createMemberSession(newUser.id);
       return sendJson(res, 200, {
         ok: true,
@@ -825,55 +829,15 @@ const server = http.createServer(async (req, res) => {
 
       await db.saveOrder(order);
 
-      if (!memberEmail || !isSmtpConfigured()) {
-        return sendJson(res, 200, {
-          ok: true,
-          order,
-          stock: updatedStock,
-          emailSent: false,
-          emailStatus: 'none'
-        });
-      }
-
-      try {
-        const transporter = createTransporter();
-        const { html, text } = buildReceiptEmail(order, clubName);
-        const attachments = fs.existsSync(LOGO_PATH)
-          ? [{ filename: 'logo.jpg', path: LOGO_PATH, cid: 'club-logo' }]
-          : [];
-
-        const mailOptions = {
-          from: `"${clubName}" <${process.env.SMTP_USER}>`,
-          to: order.memberEmail,
-          subject: `Merci pour votre commande ${order.ref} — ${clubName}`,
-          text,
-          html,
-          attachments
-        };
-
-        const clubCopy = (body.clubEmail || process.env.CLUB_EMAIL || '').trim();
-        if (clubCopy && clubCopy !== order.memberEmail && !clubCopy.includes('monclub.fr')) {
-          mailOptions.bcc = clubCopy;
-        }
-
-        await transporter.sendMail(mailOptions);
-        return sendJson(res, 200, {
-          ok: true,
-          order,
-          stock: updatedStock,
-          emailSent: true,
-          emailStatus: 'sent'
-        });
-      } catch (mailErr) {
-        return sendJson(res, 200, {
-          ok: true,
-          order,
-          stock: updatedStock,
-          emailSent: false,
-          emailStatus: 'error',
-          emailError: mailErr.message
-        });
-      }
+      const mailResult = await mailer.sendOrderConfirmationEmail(order, clubName, body.clubEmail);
+      return sendJson(res, 200, {
+        ok: true,
+        order,
+        stock: updatedStock,
+        emailSent: Boolean(mailResult && mailResult.sent),
+        emailStatus: mailResult && mailResult.sent ? 'sent' : (mailResult && mailResult.simulated ? 'simulated' : 'none'),
+        emailError: mailResult && mailResult.error ? mailResult.error : undefined
+      });
     } catch (err) {
       return sendJson(res, 400, { ok: false, error: err.message });
     }
