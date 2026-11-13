@@ -8,7 +8,8 @@
     PRODUCTS: 'club_shop_products_v1',
     STOCK: 'club_shop_stock_v1',
     SETTINGS: 'club_shop_settings_v1',
-    ORDERS: 'club_shop_orders_v1'
+    ORDERS: 'club_shop_orders_v1',
+    MEMBER: 'club_shop_member_v1'
   };
 
   const CATEGORY_TITLES = {
@@ -30,7 +31,7 @@
     settings: { ...DEFAULT_SETTINGS, ...loadJson(STORAGE_KEYS.SETTINGS, {}) },
     orders: loadJson(STORAGE_KEYS.ORDERS, []),
     lastOrder: null,
-    member: null,
+    member: loadJson(STORAGE_KEYS.MEMBER, null),
     memberOrders: [],
     authOrigin: 'header'
   };
@@ -1407,6 +1408,7 @@
 
       state.member = data.user;
       state.memberOrders = Array.isArray(data.orders) ? data.orders : [];
+      saveJson(STORAGE_KEYS.MEMBER, state.member);
       updateMemberUi();
       applyMemberPreferences();
       showToast(`Bienvenue ${state.member.name} !`);
@@ -1469,6 +1471,7 @@
 
       state.member = data.user;
       state.memberOrders = [];
+      saveJson(STORAGE_KEYS.MEMBER, state.member);
       updateMemberUi();
       applyMemberPreferences();
       showToast('Votre compte adhérent a été créé avec succès !');
@@ -1499,6 +1502,7 @@
     }
     state.member = null;
     state.memberOrders = [];
+    try { localStorage.removeItem(STORAGE_KEYS.MEMBER); } catch {}
     updateMemberUi();
     showToast('Vous avez été déconnecté.');
     closeAccountModal();
@@ -1534,6 +1538,7 @@
       }
 
       state.member = data.user;
+      saveJson(STORAGE_KEYS.MEMBER, state.member);
       updateMemberUi();
       applyMemberPreferences();
       els.profileSuccessMsg.textContent = 'Préférences mises à jour avec succès !';
@@ -1799,6 +1804,19 @@
 
   function init() {
     applySettingsToUi();
+    if (state.member) {
+      updateMemberUi();
+      applyMemberPreferences();
+      fetch(`/api/member/orders?email=${encodeURIComponent(state.member.email)}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data && Array.isArray(data.orders)) {
+            state.memberOrders = data.orders;
+            renderMemberOrders();
+          }
+        })
+        .catch(() => {});
+    }
     renderProducts();
     renderCart();
     bindEvents();
