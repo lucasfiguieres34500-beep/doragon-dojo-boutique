@@ -4,6 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { PRODUCTS: DEFAULT_PRODUCTS, createDefaultStock, normalizeStock } = require('./catalog.js');
+const db = require('./db.js');
 
 loadEnv(path.join(__dirname, '.env'));
 
@@ -391,7 +392,7 @@ function verifyMemberPassword(password, salt, hash) {
   }
 }
 
-function getAuthenticatedMember(req) {
+async function getAuthenticatedMember(req) {
   const cookies = parseCookies(req);
   const token = cookies[MEMBER_SESSION_COOKIE];
   if (!token) return null;
@@ -401,8 +402,7 @@ function getAuthenticatedMember(req) {
     activeMemberSessions.delete(token);
     return null;
   }
-  const users = readUsers();
-  return users.find((u) => u.id === session.userId) || null;
+  return await db.findUserById(session.userId);
 }
 
 function createMemberSession(userId) {
@@ -446,7 +446,8 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && urlPath === '/api/health') {
     return sendJson(res, 200, {
       ok: true,
-      emailConfigured: isSmtpConfigured()
+      emailConfigured: isSmtpConfigured(),
+      database: db.isSupabaseConfigured() ? 'supabase' : 'local-json'
     });
   }
 
@@ -474,14 +475,11 @@ const server = http.createServer(async (req, res) => {
 
   // --- Espace Adhérent Auth Endpoints ---
   if (req.method === 'GET' && urlPath === '/api/member/me') {
-    const member = getAuthenticatedMember(req);
+    const member = await getAuthenticatedMember(req);
     if (!member) {
       return sendJson(res, 200, { ok: true, authenticated: false, user: null, orders: [] });
     }
-    const allOrders = readOrders();
-    const memberOrders = allOrders.filter(
-      (o) => (o.memberId && o.memberId === member.id) || (o.memberEmail && o.memberEmail.toLowerCase() === member.email.toLowerCase())
-    );
+    const memberOrders = await db.getOrdersForMember(member.id, member.email);
     return sendJson(res, 200, {
       ok: true,
       authenticated: true,
@@ -510,8 +508,8 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { ok: false, error: 'Le mot de passe doit comporter au moins 6 caractères.' });
       }
 
-      const users = readUsers();
-      if (users.some((u) => u.email.toLowerCase() === email)) {
+      const existing = await db.findUserByEmail(email);
+      if (existing) {
         return sendJson(res, 400, { ok: false, error: 'Cet email est déjà associé à un compte adhérent.' });
       }
 
@@ -528,8 +526,7 @@ const server = http.createServer(async (req, res) => {
         createdAt: new Date().toISOString()
       };
 
-      users.push(newUser);
-      saveUsers(users);
+      await db.saveUser(newUser);
 
       const cookie = createMemberSession(newUser.id);
       return sendJson(res, 200, {
@@ -553,17 +550,13 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { ok: false, error: 'Email et mot de passe requis.' });
       }
 
-      const users = readUsers();
-      const user = users.find((u) => u.email.toLowerCase() === email);
+      const user = await db.findUserByEmail(email);
       if (!user || !user.salt || !user.hash || !verifyMemberPassword(password, user.salt, user.hash)) {
         return sendJson(res, 401, { ok: false, error: 'Email ou mot de passe incorrect.' });
       }
 
       const cookie = createMemberSession(user.id);
-      const allOrders = readOrders();
-      const memberOrders = allOrders.filter(
-        (o) => (o.memberId && o.memberId === user.id) || (o.memberEmail && o.memberEmail.toLowerCase() === user.email.toLowerCase())
-      );
+      const memberOrders = await db.getOrdersForMember(user.id, user.email);
 
       return sendJson(res, 200, {
         ok: true,
@@ -582,24 +575,20 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'POST' && urlPath === '/api/member/update-profile') {
-    const member = getAuthenticatedMember(req);
+    const member = await getAuthenticatedMember(req);
     if (!member) {
       return sendJson(res, 401, { ok: false, error: 'Authentification requise.' });
     }
     try {
       const body = await readJsonBody(req);
-      const users = readUsers();
-      const idx = users.findIndex((u) => u.id === member.id);
-      if (idx === -1) {
-        return sendJson(res, 404, { ok: false, error: 'Utilisateur introuvable.' });
-      }
-      if (body.name) users[idx].name = String(body.name).trim();
-      if (body.phone !== undefined) users[idx].phone = String(body.phone).trim();
-      if (body.favoriteRashguardSize) users[idx].favoriteRashguardSize = String(body.favoriteRashguardSize).trim();
-      if (body.favoriteGlovesSize) users[idx].favoriteGlovesSize = String(body.favoriteGlovesSize).trim();
-      saveUsers(users);
+      const updated = await db.updateUserProfile(member.id, {
+        name: body.name ? String(body.name).trim() : undefined,
+        phone: body.phone !== undefined ? String(body.phone).trim() : undefined,
+        favoriteRashguardSize: body.favoriteRashguardSize ? String(body.favoriteRashguardSize).trim() : undefined,
+        favoriteGlovesSize: body.favoriteGlovesSize ? String(body.favoriteGlovesSize).trim() : undefined
+      });
 
-      return sendJson(res, 200, { ok: true, user: sanitizeUser(users[idx]) });
+      return sendJson(res, 200, { ok: true, user: sanitizeUser(updated) });
     } catch (err) {
       return sendJson(res, 400, { ok: false, error: err.message });
     }
@@ -609,8 +598,8 @@ const server = http.createServer(async (req, res) => {
     if (!isAuthenticated(req)) {
       return sendJson(res, 401, { ok: false, error: 'Authentification requise.' });
     }
-    const users = readUsers().map(sanitizeUser);
-    const orders = readOrders();
+    const users = (await db.getUsers()).map(sanitizeUser);
+    const orders = await db.getAllOrders();
     const membersWithStats = users.map((u) => {
       const uOrders = orders.filter((o) => (o.memberId && o.memberId === u.id) || (o.memberEmail && o.memberEmail.toLowerCase() === u.email.toLowerCase()));
       const totalSpent = uOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
@@ -648,7 +637,8 @@ const server = http.createServer(async (req, res) => {
     if (!isAuthenticated(req)) {
       return sendJson(res, 401, { ok: false, error: 'Authentification requise.' });
     }
-    return sendJson(res, 200, { ok: true, orders: readOrders() });
+    const orders = await db.getAllOrders();
+    return sendJson(res, 200, { ok: true, orders });
   }
 
   if (req.method === 'DELETE' && urlPath === '/api/orders') {
@@ -661,7 +651,8 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && urlPath === '/api/products') {
-    return sendJson(res, 200, { ok: true, products: readProducts() });
+    const products = await db.getProducts();
+    return sendJson(res, 200, { ok: true, products });
   }
 
   if (req.method === 'POST' && urlPath === '/api/products') {
@@ -707,16 +698,16 @@ const server = http.createServer(async (req, res) => {
           : ['Équipement officiel du club']
       };
 
-      const products = readProducts();
+      const products = await db.getProducts();
       products.push(newProduct);
-      saveProducts(products);
+      await db.saveProducts(products);
 
-      const stock = readStock();
+      const stock = await db.getStock();
       stock[id] = {};
       sizes.forEach((s) => {
         stock[id][s] = initialStock;
       });
-      const updatedStock = saveStock(stock);
+      const updatedStock = await db.saveStock(stock);
 
       return sendJson(res, 200, { ok: true, product: newProduct, products, stock: updatedStock });
     } catch (err) {
@@ -731,11 +722,11 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await readJsonBody(req);
       const id = String(body.id || '').trim();
-      const products = readProducts().filter((p) => p.id !== id);
-      saveProducts(products);
-      const stock = readStock();
+      const products = (await db.getProducts()).filter((p) => p.id !== id);
+      await db.saveProducts(products);
+      const stock = await db.getStock();
       delete stock[id];
-      const updatedStock = saveStock(stock);
+      const updatedStock = await db.saveStock(stock);
       return sendJson(res, 200, { ok: true, products, stock: updatedStock });
     } catch (err) {
       return sendJson(res, 400, { ok: false, error: err.message });
@@ -743,7 +734,8 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && urlPath === '/api/stock') {
-    return sendJson(res, 200, { ok: true, stock: readStock() });
+    const stock = await db.getStock();
+    return sendJson(res, 200, { ok: true, stock });
   }
 
   if (req.method === 'POST' && urlPath === '/api/stock') {
@@ -752,10 +744,10 @@ const server = http.createServer(async (req, res) => {
     }
     try {
       const body = await readJsonBody(req);
-      let stock = readStock();
+      let stock = await db.getStock();
 
       if (body.stock && typeof body.stock === 'object') {
-        stock = saveStock(body.stock);
+        stock = await db.saveStock(body.stock);
         return sendJson(res, 200, { ok: true, stock });
       }
 
@@ -772,7 +764,7 @@ const server = http.createServer(async (req, res) => {
         stock[productId][size] = Math.max(0, stock[productId][size] + Math.trunc(body.delta));
       }
 
-      stock = saveStock(stock);
+      stock = await db.saveStock(stock);
       return sendJson(res, 200, { ok: true, stock });
     } catch (err) {
       return sendJson(res, 400, { ok: false, error: err.message });
@@ -783,7 +775,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await readJsonBody(req);
       const memberName = String(body.memberName || '').trim();
-      const authMember = getAuthenticatedMember(req);
+      const authMember = await getAuthenticatedMember(req);
       const memberEmail = String(body.memberEmail || (authMember ? authMember.email : '')).trim();
       const items = Array.isArray(body.items) ? body.items : [];
 
@@ -791,7 +783,7 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { ok: false, error: 'Nom complet et articles dans le panier requis.' });
       }
 
-      const currentStock = readStock();
+      const currentStock = await db.getStock();
       for (const item of items) {
         const qty = Math.max(1, Math.floor(Number(item.qty) || 1));
         const available = currentStock[item.id]?.[item.size];
@@ -810,7 +802,7 @@ const server = http.createServer(async (req, res) => {
           currentStock[item.id][item.size] = Math.max(0, currentStock[item.id][item.size] - qty);
         }
       }
-      const updatedStock = saveStock(currentStock);
+      const updatedStock = await db.saveStock(currentStock);
 
       const clubName = String(body.clubName || process.env.CLUB_NAME || 'DORAGON DOJO CLUB').trim();
       const paymentMethod = String(body.paymentMethod || 'Paiement en ligne par Carte Bancaire').trim();
@@ -830,7 +822,7 @@ const server = http.createServer(async (req, res) => {
         items
       };
 
-      saveOrder(order);
+      await db.saveOrder(order);
 
       if (!memberEmail || !isSmtpConfigured()) {
         return sendJson(res, 200, {
