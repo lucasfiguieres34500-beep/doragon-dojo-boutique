@@ -38,6 +38,7 @@
   };
 
   let stripeInstance = null;
+  let stripePublishableKey = null;
   let stripeElementsInstance = null;
   let stripePaymentElement = null;
   let currentPaymentIntentRef = null;
@@ -615,7 +616,6 @@
   async function initStripePaymentElement() {
     const radioClub = document.querySelector('input[name="paymentOption"][value="club"]');
     if (radioClub && radioClub.checked) return;
-    if (stripeLoading) return;
 
     const { lines, totalPrice } = computeCartDetails();
     if (lines.length === 0) return;
@@ -623,62 +623,79 @@
     const container = document.getElementById('stripe-payment-element');
     if (!container) return;
 
-    // Si déjà monté pour le même montant, ne pas recréer
-    if (stripePaymentElement && currentPaymentIntentSecret && mountedTotal === totalPrice) {
+    // Si déjà monté pour le même montant et toujours valide, ne pas recréer
+    if (stripePaymentElement && currentPaymentIntentSecret && mountedTotal === totalPrice && container.children.length > 0 && !container.querySelector('.stripe-loading-skeleton')) {
       return;
     }
 
-    if (typeof window.Stripe !== 'function') {
-      container.innerHTML = `
-        <div class="stripe-loading-skeleton">
-          <div class="spinner-sm"></div>
-          <span>Connexion à la passerelle sécurisée Stripe...</span>
-        </div>
-      `;
-      setTimeout(initStripePaymentElement, 400);
-      return;
-    }
-
+    if (stripeLoading) return;
     stripeLoading = true;
-    try {
-      const res = await fetch('/api/create-payment-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: lines.map(({ product, size, qty, lineTotal }) => ({
-            id: product.id,
-            name: product.name,
-            size,
-            qty,
-            lineTotal
-          })),
-          memberName: (document.getElementById('member-name')?.value || '').trim() || (state.member?.name || ''),
-          memberEmail: (document.getElementById('member-email')?.value || '').trim() || (state.member?.email || ''),
-          memberPhone: (document.getElementById('member-phone')?.value || '').trim() || (state.member?.phone || '')
-        })
-      });
 
-      const data = await res.json();
-      if (!res.ok || !data.ok || !data.clientSecret) {
-        container.innerHTML = `
-          <div class="payment-error-message">
-            ${escapeHtml(data.error || 'Erreur lors de l\'initialisation du paiement.')}
-          </div>
-        `;
+    try {
+      if (!stripeInstance) {
+        if (!stripePublishableKey) {
+          const cfg = await fetch('/api/stripe-config').then(r => r.json()).catch(() => ({}));
+          if (cfg && cfg.ok && cfg.publishableKey) stripePublishableKey = cfg.publishableKey;
+        }
+        if (typeof window.Stripe === 'function' && stripePublishableKey) {
+          stripeInstance = window.Stripe(stripePublishableKey);
+        }
+      }
+
+      if (!currentPaymentIntentSecret || mountedTotal !== totalPrice) {
+        const memberName = (document.getElementById('member-name')?.value || '').trim() || (state.member?.name || '');
+        const memberEmail = (document.getElementById('member-email')?.value || '').trim() || (state.member?.email || '');
+        const memberPhone = (document.getElementById('member-phone')?.value || '').trim() || (state.member?.phone || '');
+
+        const res = await fetch('/api/create-payment-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: lines.map(({ product, size, qty, lineTotal }) => ({
+              id: product.id,
+              name: product.name,
+              size,
+              qty,
+              lineTotal
+            })),
+            memberName,
+            memberEmail,
+            memberPhone
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.ok || !data.clientSecret) {
+          container.innerHTML = `
+            <div class="payment-error-message">
+              ${escapeHtml(data.error || 'Erreur lors de l\'initialisation du paiement.')}
+            </div>
+          `;
+          stripeLoading = false;
+          return;
+        }
+
+        currentPaymentIntentSecret = data.clientSecret;
+        currentPaymentIntentRef = data.ref;
+        mountedTotal = totalPrice;
+
+        if (!stripeInstance && data.publishableKey && typeof window.Stripe === 'function') {
+          stripeInstance = window.Stripe(data.publishableKey);
+        }
+      }
+
+      if (!stripeInstance) {
         stripeLoading = false;
         return;
       }
 
-      currentPaymentIntentSecret = data.clientSecret;
-      currentPaymentIntentRef = data.ref;
-      mountedTotal = totalPrice;
-
-      if (!stripeInstance) {
-        stripeInstance = window.Stripe(data.publishableKey);
+      if (stripePaymentElement) {
+        try { stripePaymentElement.unmount(); } catch (_) {}
+        stripePaymentElement = null;
       }
 
       stripeElementsInstance = stripeInstance.elements({
-        clientSecret: data.clientSecret,
+        clientSecret: currentPaymentIntentSecret,
         appearance: {
           theme: 'night',
           variables: {
@@ -714,8 +731,33 @@
         }
       });
 
+      const memberName = (document.getElementById('member-name')?.value || '').trim() || (state.member?.name || '');
+      const memberEmail = (document.getElementById('member-email')?.value || '').trim() || (state.member?.email || '');
+      const memberPhone = (document.getElementById('member-phone')?.value || '').trim() || (state.member?.phone || '');
+
       stripePaymentElement = stripeElementsInstance.create('payment', {
-        layout: 'tabs'
+        layout: {
+          type: 'tabs',
+          defaultCollapsed: false
+        },
+        wallets: {
+          applePay: 'auto',
+          googlePay: 'auto'
+        },
+        fields: {
+          billingDetails: {
+            name: 'auto',
+            email: 'auto',
+            phone: 'auto'
+          }
+        },
+        defaultValues: {
+          billingDetails: {
+            name: memberName || undefined,
+            email: memberEmail || undefined,
+            phone: memberPhone || undefined
+          }
+        }
       });
 
       container.innerHTML = '';
@@ -723,7 +765,7 @@
     } catch (err) {
       container.innerHTML = `
         <div class="payment-error-message">
-          Impossible de charger le formulaire de paiement.
+          Impossible de charger le formulaire de paiement sécurisé.
         </div>
       `;
     } finally {
@@ -807,6 +849,12 @@
     els.cartBackdrop.setAttribute('aria-hidden', 'false');
     els.cartDrawer.setAttribute('aria-hidden', 'false');
     activateOverlay(els.cartDrawer);
+
+    // Pré-chargement immédiat en arrière-plan pour que le paiement soit instantané
+    const { lines } = computeCartDetails();
+    if (lines.length > 0 && !currentPaymentIntentSecret && !stripeLoading) {
+      setTimeout(initStripePaymentElement, 50);
+    }
   }
 
   function closeCartDrawer() {
@@ -2265,8 +2313,22 @@
     }
   }
 
+  async function prewarmStripe() {
+    try {
+      const res = await fetch('/api/stripe-config');
+      const data = await res.json();
+      if (data && data.ok && data.publishableKey) {
+        stripePublishableKey = data.publishableKey;
+        if (typeof window.Stripe === 'function') {
+          stripeInstance = window.Stripe(data.publishableKey);
+        }
+      }
+    } catch (_) {}
+  }
+
   function init() {
     applySettingsToUi();
+    prewarmStripe();
     if (state.member) {
       updateMemberUi();
       applyMemberPreferences();

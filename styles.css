@@ -928,14 +928,17 @@ body.modal-open .site-header {
   display: flex;
   flex-direction: column;
   box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(35, 95, 215, 0.15);
-  transform: translateX(100%);
+  transform: translate3d(100%, 0, 0);
+  will-change: transform;
+  backface-visibility: hidden;
+  perspective: 1000px;
   visibility: hidden;
   pointer-events: none;
-  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.32s ease;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.28s ease;
 }
 
 .cart-drawer.is-open {
-  transform: translateX(0);
+  transform: translate3d(0, 0, 0);
   visibility: visible;
   pointer-events: auto;
   z-index: 9995;
@@ -3295,6 +3298,7 @@ select option {
   border-radius: 10px;
   padding: 0.85rem;
   transition: border-color 0.2s ease;
+  contain: layout paint;
 }
 
 .stripe-element-container:focus-within {

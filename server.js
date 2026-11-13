@@ -469,6 +469,20 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  // Fichier officiel de vérification de domaine Apple Pay (requis par Apple pour activer Apple Pay)
+  if (req.method === 'GET' && urlPath === '/.well-known/apple-developer-merchantid-domain-association') {
+    const applePath = path.join(ROOT_DIR, '.well-known', 'apple-developer-merchantid-domain-association');
+    fs.readFile(applePath, (err, data) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        return res.end('Apple association file missing');
+      }
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end(data);
+    });
+    return;
+  }
+
   // --- Endpoints Stripe (Paiements sécurisés en ligne) ---
   if (req.method === 'GET' && urlPath === '/api/stripe-config') {
     return sendJson(res, 200, {
