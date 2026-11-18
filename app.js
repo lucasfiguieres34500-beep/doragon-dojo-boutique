@@ -21,7 +21,7 @@
   const initialProducts = loadJson(STORAGE_KEYS.PRODUCTS, DEFAULT_PRODUCTS);
 
   const state = {
-    view: 'shop',
+    view: 'landing',
     filter: 'all',
     products: Array.isArray(initialProducts) ? initialProducts : DEFAULT_PRODUCTS,
     selectedSizes: Object.fromEntries(
@@ -53,7 +53,6 @@
   let stripeLoadPromise = null;
   let checkoutBusy = false;
   let reservationRequestId = null;
-  let passwordResetToken = '';
   const pendingPayments = new Map();
 
   function pendingPaymentId() {
@@ -81,12 +80,9 @@
 
   const els = {
     landingView: document.getElementById('landing-view'),
-    shopView: document.getElementById('products-section') || document.getElementById('shop-view'),
+    shopView: document.getElementById('shop-view'),
     siteHeader: document.querySelector('.site-header'),
     enterShopBtn: document.getElementById('enter-shop-btn'),
-    heroSizeGuideBtn: document.getElementById('hero-size-guide-btn'),
-    footerSizeGuideBtn: document.getElementById('footer-size-guide-btn'),
-    footerAccountBtn: document.getElementById('footer-account-btn'),
     brandHomeBtn: document.getElementById('brand-home-btn'),
     filterBtns: document.querySelectorAll('.segmented-btn[data-filter]'),
     productsGrid: document.getElementById('products-grid'),
@@ -258,7 +254,6 @@
     document.getElementById('online-card-panel').hidden = false;
     document.getElementById('club-reservation-panel').hidden = true;
     displayOrderConfirmation(order);
-    els.confirmOrderCard.insertAdjacentHTML('afterbegin', renderOrderProgress(order));
     rememberPendingPayment(null);
     renderProducts();
     renderCart();
@@ -461,14 +456,45 @@
   let viewTransitionTimer = null;
 
   function enterShop(category = 'all') {
-    state.view = 'shop';
-    document.body.classList.remove('is-landing');
-    if (els.shopView) els.shopView.hidden = false;
-    setFilter(category);
+    clearTimeout(viewTransitionTimer);
+    if (state.view === 'shop') {
+      setFilter(category);
+      return;
+    }
+
+    const revealShop = () => {
+      state.view = 'shop';
+      document.body.classList.remove('is-landing');
+      els.landingView.classList.remove('is-leaving');
+      els.landingView.hidden = true;
+      els.shopView.hidden = false;
+      els.shopView.classList.remove('is-entering');
+      if (els.siteHeader) els.siteHeader.classList.remove('is-revealing');
+      void els.shopView.offsetWidth;
+      els.shopView.classList.add('is-entering');
+      if (els.siteHeader) els.siteHeader.classList.add('is-revealing');
+      setFilter(category);
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    };
+
+    if (prefersReducedMotion()) {
+      revealShop();
+      return;
+    }
+
+    els.landingView.classList.add('is-leaving');
+    viewTransitionTimer = setTimeout(revealShop, 320);
   }
 
   function showLanding() {
-    setFilter('all');
+    clearTimeout(viewTransitionTimer);
+    state.view = 'landing';
+    document.body.classList.add('is-landing');
+    if (els.siteHeader) els.siteHeader.classList.remove('is-revealing');
+    els.shopView.classList.remove('is-entering');
+    els.shopView.hidden = true;
+    els.landingView.classList.remove('is-leaving');
+    els.landingView.hidden = false;
     window.scrollTo({
       top: 0,
       behavior: prefersReducedMotion() ? 'auto' : 'smooth',
@@ -534,22 +560,15 @@
           })
           .join('');
 
-        const categoryBadge = product.category === 'gants' ? 'MMA & Grappling' : 'No-Gi · Luta Livre';
-
         return `
         <article class="product-card" data-product-id="${product.id}" style="--card-index:${index};">
           <div class="product-media" data-action="open-details" data-product-id="${product.id}">
-            <span class="product-card-badge">${categoryBadge}</span>
             <img src="${product.image}" alt="${escapeHtml(product.name)}" loading="lazy" decoding="async" />
-            <span class="product-zoom-hint">Détails & Photos</span>
           </div>
           <div class="product-body">
             <div class="product-top-row">
               <h3 class="product-title">${escapeHtml(product.name)}</h3>
-              <div class="product-price-wrap">
-                <span class="product-price">${formatEuro(product.price)}</span>
-                <span class="product-price-tax">Prix Adhérent</span>
-              </div>
+              <span class="product-price">${formatEuro(product.price)}</span>
             </div>
 
             <div class="size-picker-label">
@@ -1268,8 +1287,7 @@
             redirect: 'if_required',
           });
           if (error) throw new Error(error.message || 'Paiement refusé.');
-          if (paymentIntent?.status === 'processing')
-            rememberPendingPayment(paymentIntent.id);
+          if (paymentIntent?.status === 'processing') rememberPendingPayment(paymentIntent.id);
           if (!paymentIntent || paymentIntent.status !== 'succeeded') {
             throw new Error(
               paymentIntent?.status === 'processing'
@@ -1557,14 +1575,9 @@
     const ordersHtml = state.memberOrders
       .map((order) => {
         const isOnline = (order.paymentMethod || '').toLowerCase().includes('en ligne');
-        const statusLabel =
-          order.workflow?.status === 'expired'
-            ? 'Réservation expirée'
-            : order.workflow?.status === 'collected'
-              ? '✓ Réglé · Récupérée'
-              : isOnline
-                ? '✓ Payé CB (En ligne)'
-                : '⚠️ Réservation (À régler au dojo)';
+        const statusLabel = isOnline
+          ? '✓ Payé CB (En ligne)'
+          : '⚠️ Réservation (À régler au dojo)';
         const statusClass = isOnline ? 'is-paid' : 'is-reserved';
 
         return `
@@ -1578,7 +1591,6 @@
           </div>
 
           <div class="member-order-items-list">
-            ${renderOrderProgress(order)}
             ${(order.items || [])
               .map(
                 (it) => `
@@ -1636,24 +1648,13 @@
       )
       .join('');
 
-    const finalStatus = order.workflow?.status;
-    const statusBadgeHtml =
-      finalStatus === 'expired'
-        ? '<strong>Réservation expirée — articles remis en stock</strong>'
-        : finalStatus === 'collected'
-          ? '<strong>Commande récupérée et réglée</strong>'
-          : isOnline
-            ? `<div style="display:inline-block;padding:6px 14px;background:#dcfce7;color:#15803d;border:1.5px solid #86efac;border-radius:999px;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">✓ Payé en ligne par Carte Bancaire</div>`
-            : `<div style="display:inline-block;padding:6px 14px;background:#fef3c7;color:#b45309;border:1.5px solid #fcd34d;border-radius:999px;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">⚠️ Réservation — À régler au dojo</div>`;
+    const statusBadgeHtml = isOnline
+      ? `<div style="display:inline-block;padding:6px 14px;background:#dcfce7;color:#15803d;border:1.5px solid #86efac;border-radius:999px;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">✓ Payé en ligne par Carte Bancaire</div>`
+      : `<div style="display:inline-block;padding:6px 14px;background:#fef3c7;color:#b45309;border:1.5px solid #fcd34d;border-radius:999px;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">⚠️ Réservation — À régler au dojo</div>`;
 
-    const instructionsHtml =
-      finalStatus === 'expired'
-        ? '<p>Cette réservation ne permet plus de retirer des articles. Une nouvelle commande est nécessaire.</p>'
-        : finalStatus === 'collected'
-          ? '<p>Les articles de cette commande ont déjà été remis à l’adhérent.</p>'
-          : isOnline
-            ? `<p style="margin:0;font-size:12px;color:#374151;line-height:1.5;">Votre règlement a été effectué en ligne avec succès. Vous pouvez retirer votre équipement dès votre prochain cours à l'accueil du dojo sur présentation de ce reçu.</p>`
-            : `<p style="margin:0;font-size:12px;color:#b45309;line-height:1.5;"><strong>Rappel réservation :</strong> Vos articles sont réservés et bloqués au club. Veuillez prévoir votre règlement de <strong>${formatEuro(order.total)}</strong> (en Espèces ou par Carte Bancaire) lors de votre prochain entraînement pour récupérer vos équipements.</p>`;
+    const instructionsHtml = isOnline
+      ? `<p style="margin:0;font-size:12px;color:#374151;line-height:1.5;">Votre règlement a été effectué en ligne avec succès. Vous pouvez retirer votre équipement dès votre prochain cours à l'accueil du dojo sur présentation de ce reçu.</p>`
+      : `<p style="margin:0;font-size:12px;color:#b45309;line-height:1.5;"><strong>Rappel réservation :</strong> Vos articles sont réservés et bloqués au club. Veuillez prévoir votre règlement de <strong>${formatEuro(order.total)}</strong> (en Espèces ou par Carte Bancaire) lors de votre prochain entraînement pour récupérer vos équipements.</p>`;
 
     const receiptHtml = `<!DOCTYPE html>
 <html lang="fr">
@@ -1749,120 +1750,6 @@
     }, 350);
   }
 
-  function renderOrderProgress(order) {
-    const labels = {
-      preparing: 'À préparer',
-      ready: 'Prête au dojo',
-      collected: 'Récupérée',
-      expired: 'Réservation expirée',
-    };
-    const status = labels[order.workflow?.status] ? order.workflow.status : 'preparing';
-    const expiry = Date.parse(order.workflow?.expiresAt);
-    const deadline =
-      Number.isFinite(expiry) && ['preparing', 'ready'].includes(status)
-        ? `<span>À retirer avant le ${escapeHtml(new Date(expiry).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'short', timeStyle: 'short' }))}</span>`
-        : '';
-    return `<div class="order-progress"><strong class="order-status order-status-${status}">${labels[status]}</strong>${deadline}${status === 'expired' ? '<span>Articles remis en stock. Vous pouvez passer une nouvelle commande.</span>' : ''}</div>`;
-  }
-
-  function showPasswordForm(kind) {
-    openAccountModal('login');
-    els.accountGuestView.hidden = false;
-    els.accountLoggedView.hidden = true;
-    els.memberLoginForm.hidden = true;
-    els.memberRegisterForm.hidden = true;
-    const form = document.getElementById(kind + '-password-form');
-    form.hidden = false;
-    document.getElementById(kind + '-feedback').hidden = true;
-    requestAnimationFrame(() => form.querySelector('input').focus());
-  }
-
-  function bindPasswordRecovery() {
-    window.addEventListener('hashchange', () => {
-      const token = new URLSearchParams(location.hash.slice(1)).get('reset-password');
-      const orders = location.hash === '#orders';
-      if (!token && !orders) return;
-      history.replaceState({}, document.title, location.pathname + location.search);
-      if (token) { passwordResetToken = token; showPasswordForm('reset'); }
-      else openAccountModal('orders');
-    });
-    document.getElementById('forgot-password-btn').addEventListener('click', () => {
-      showPasswordForm('forgot');
-      document.getElementById('forgot-email').value =
-        document.getElementById('login-email').value;
-    });
-    document
-      .querySelectorAll('[data-back-to-login]')
-      .forEach((button) => button.addEventListener('click', () => switchGuestTab('login')));
-    for (const kind of ['forgot', 'reset'])
-      document
-        .getElementById(kind + '-password-form')
-        .addEventListener('submit', async (event) => {
-          event.preventDefault();
-          const form = event.currentTarget,
-            button = form.querySelector('[type="submit"]'),
-            feedback = document.getElementById(kind + '-feedback');
-          if (button.disabled) return;
-          feedback.hidden = true;
-          const password = document.getElementById('reset-password').value;
-          if (
-            kind === 'reset' &&
-            password !== document.getElementById('reset-password-confirm').value
-          ) {
-            feedback.textContent = 'Les deux mots de passe doivent être identiques.';
-            feedback.className = 'account-alert account-alert-error';
-            feedback.hidden = false;
-            return;
-          }
-          button.disabled = true;
-          const label = button.textContent;
-          button.textContent = 'En cours…';
-          try {
-            const body =
-              kind === 'forgot'
-                ? { email: document.getElementById('forgot-email').value.trim() }
-                : { token: passwordResetToken, password };
-            const response = await fetch(
-              '/api/member/' + (kind === 'forgot' ? 'forgot-password' : 'reset-password'),
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-              },
-            );
-            const data = await response.json();
-            if (!response.ok || !data.ok)
-              throw new Error(data.error || 'Impossible de traiter la demande. Réessayez.');
-            if (kind === 'reset') {
-              passwordResetToken = '';
-              form.reset();
-              state.member = null;
-              state.memberOrders = [];
-              saveJson(STORAGE_KEYS.MEMBER, null);
-              resetStripePayment();
-              updateMemberUi();
-              switchGuestTab('login');
-              showToast('Mot de passe enregistré. Vous pouvez vous connecter.');
-              document.getElementById('login-password').focus();
-            } else {
-              feedback.textContent = data.message;
-              feedback.className = 'account-alert account-alert-success';
-              feedback.hidden = false;
-            }
-          } catch (error) {
-            feedback.textContent =
-              error.message === 'Failed to fetch'
-                ? 'Connexion interrompue. Réessayez.'
-                : error.message;
-            feedback.className = 'account-alert account-alert-error';
-            feedback.hidden = false;
-          } finally {
-            button.disabled = false;
-            button.textContent = label;
-          }
-        });
-  }
-
   function openAccountModal(targetTab, origin = 'header') {
     if (!els.accountModalBackdrop) return;
     state.authOrigin = origin;
@@ -1871,9 +1758,6 @@
       els.accountLoggedView.hidden = false;
       switchLoggedTab(targetTab === 'profile' ? 'profile' : 'orders');
       renderMemberOrders();
-      checkMemberSession().then(() => {
-        if (state.member) renderMemberOrders();
-      });
     } else {
       els.accountGuestView.hidden = false;
       els.accountLoggedView.hidden = true;
@@ -1894,8 +1778,6 @@
   }
 
   function switchGuestTab(tab) {
-    document.getElementById('forgot-password-form').hidden = true;
-    document.getElementById('reset-password-form').hidden = true;
     els.accountModalBackdrop.querySelector('.account-scroll-body').scrollTop = 0;
     if (tab === 'register') {
       els.tabLoginBtn.classList.remove('is-active');
@@ -2130,19 +2012,7 @@
   }
 
   function bindEvents() {
-    if (els.enterShopBtn) {
-      els.enterShopBtn.addEventListener('click', () => enterShop('all'));
-    }
-
-    if (els.heroSizeGuideBtn) {
-      els.heroSizeGuideBtn.addEventListener('click', openSizeGuide);
-    }
-    if (els.footerSizeGuideBtn) {
-      els.footerSizeGuideBtn.addEventListener('click', openSizeGuide);
-    }
-    if (els.footerAccountBtn) {
-      els.footerAccountBtn.addEventListener('click', () => openAccountModal());
-    }
+    els.enterShopBtn.addEventListener('click', () => enterShop('all'));
 
     if (els.accountBtn) els.accountBtn.addEventListener('click', () => openAccountModal());
     if (els.closeAccountModalBtn)
@@ -2432,8 +2302,7 @@
           );
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        if (['canceled', 'requires_payment_method'].includes(data.paymentStatus))
-          rememberPendingPayment(null);
+        if (['canceled', 'requires_payment_method'].includes(data.paymentStatus)) rememberPendingPayment(null);
         throw new Error(data.error || 'Paiement en attente de confirmation.');
       }
       completeOrder(data);
@@ -2463,11 +2332,6 @@
   }
 
   function init() {
-    const resetParams = new URLSearchParams(location.hash.slice(1));
-    passwordResetToken = resetParams.get('reset-password') || '';
-    const openOrders = location.hash === '#orders';
-    if (passwordResetToken || openOrders)
-      history.replaceState({}, document.title, location.pathname + location.search);
     applySettingsToUi();
     if (
       state.member &&
@@ -2487,16 +2351,10 @@
     renderProducts();
     renderCart();
     bindEvents();
-    bindPasswordRecovery();
     syncOverlayState();
-    Promise.all([syncCatalogAndStockFromServer(), checkMemberSession()]).then(async () => {
-      if (passwordResetToken) {
-        showPasswordForm('reset');
-        return;
-      }
-      await checkStripePaymentReturn();
-      if (openOrders) openAccountModal('orders');
-    });
+    Promise.all([syncCatalogAndStockFromServer(), checkMemberSession()]).then(
+      checkStripePaymentReturn,
+    );
   }
 
   init();
