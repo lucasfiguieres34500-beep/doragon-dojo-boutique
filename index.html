@@ -16,18 +16,26 @@
   <link rel="dns-prefetch" href="https://api.stripe.com" />
   <script src="https://js.stripe.com/v3/" async></script>
 </head>
-<body class="is-landing">
-  <!-- En-tête -->
+<body class="is-shop">
+  <!-- Barre d'annonce e-commerce boutique officielle -->
+  <div class="announcement-bar">
+    <div class="container announcement-inner">
+      <span class="announcement-pill">Boutique Officielle</span>
+      <span class="announcement-text">🥋 Équipements homologués DORAGON DOJO CLUB · Retrait gratuit au dojo · Paiement sécurisé (CB, Apple Pay)</span>
+    </div>
+  </div>
+
+  <!-- En-tête de la boutique -->
   <header class="site-header">
     <div class="container header-inner">
-      <button type="button" class="brand brand-btn" id="brand-home-btn" aria-label="Retour à l'accueil">
+      <button type="button" class="brand brand-btn" id="brand-home-btn" aria-label="Retour au catalogue">
         <picture>
           <source media="(max-width: 950px)" srcset="assets/logo-header.webp" type="image/webp" />
           <img src="assets/logo-transparent.png" alt="Logo DORAGON DOJO CLUB" class="brand-logo" />
         </picture>
         <div class="brand-text">
           <span class="brand-name" id="header-club-name">DORAGON DOJO CLUB</span>
-          <span class="brand-tag">Boutique</span>
+          <span class="brand-tag">Boutique Officielle</span>
         </div>
       </button>
 
@@ -56,67 +64,180 @@
   </header>
 
   <main>
-    <!-- Vue 1 : Accueil épuré avec Logo + Bouton Entrer -->
-    <section class="landing-view" id="landing-view">
-      <div class="container landing-inner">
-        <div class="landing-logo-wrap">
-          <picture>
-            <source media="(max-width: 950px)" srcset="assets/dragon-animated.webp" type="image/webp" />
-            <img src="dragon_follow_feu.gif" alt="Logo animé DORAGON DOJO CLUB" class="landing-logo" width="720" height="460" fetchpriority="high" />
-          </picture>
+    <!-- Bannière Hero Athlétique & Moderne (Style Boutique Pro) -->
+    <section class="hero-shop-banner" id="hero-banner">
+      <div class="container hero-inner">
+        <div class="hero-content">
+          <div class="hero-badge-wrap">
+            <span class="hero-badge">Collection Officielle 2026 / 2027 · Adhérents</span>
+          </div>
+          <h1 class="hero-title">L'Équipement Officiel <br/><span class="text-gold">DORAGON DOJO CLUB</span></h1>
+          <p class="hero-description">
+            Rashguards de compression 4-way stretch et gants MMA compétition. Équipements techniques haute performance développés pour les entraînements et combats du dojo.
+          </p>
+          <div class="hero-cta-group">
+            <a href="#products-section" class="btn btn-hero-explore" id="hero-explore-btn">
+              <span>Voir les équipements</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </a>
+            <button type="button" class="btn btn-hero-guide" id="hero-size-guide-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z" />
+                <path d="m14.5 12.5 2-2" />
+                <path d="m11.5 9.5 2-2" />
+                <path d="m8.5 6.5 2-2" />
+                <path d="m17.5 15.5 2-2" />
+              </svg>
+              <span>Guide des tailles</span>
+            </button>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat-item">
+              <strong>100%</strong>
+              <span>Homologué Club</span>
+            </div>
+            <div class="hero-stat-divider"></div>
+            <div class="hero-stat-item">
+              <strong>4-Way Stretch</strong>
+              <span>Anti-frottement</span>
+            </div>
+            <div class="hero-stat-divider"></div>
+            <div class="hero-stat-item">
+              <strong>0 €</strong>
+              <span>Retrait direct au dojo</span>
+            </div>
+          </div>
         </div>
-
-        <span class="landing-eyebrow">Boutique Officielle Adhérents</span>
-        <h1 id="landing-club-name">DORAGON DOJO CLUB</h1>
-
-        <button type="button" class="btn btn-primary btn-enter" id="enter-shop-btn">
-          <span>Entrer dans la boutique</span>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M5 12h14" />
-            <path d="m12 5 7 7-7 7" />
-          </svg>
-        </button>
+        <div class="hero-visual">
+          <div class="hero-emblem-card">
+            <img src="assets/logo-transparent.png" alt="Emblème DORAGON DOJO CLUB" class="hero-emblem-img" width="300" height="300" />
+            <div class="hero-emblem-glow"></div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- Vue 2 : Boutique -->
-    <section class="shop-view" id="shop-view" hidden>
+    <!-- Barre de Réassurance Boutique (Trust Bar) -->
+    <section class="reassurance-bar" aria-label="Engagements et garanties boutique">
+      <div class="container reassurance-grid">
+        <div class="reassurance-item">
+          <div class="reassurance-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </div>
+          <div class="reassurance-text">
+            <strong>Équipements Homologués Dojo</strong>
+            <span>Validés par les coachs pour la Luta Livre, le MMA et le Grappling</span>
+          </div>
+        </div>
+        <div class="reassurance-item">
+          <div class="reassurance-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+          </div>
+          <div class="reassurance-text">
+            <strong>Remise en Main Propre au Club</strong>
+            <span>Pas de frais de port : préparé et remis directement à votre prochain cours</span>
+          </div>
+        </div>
+        <div class="reassurance-item">
+          <div class="reassurance-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="20" height="14" x="2" y="5" rx="2" />
+              <line x1="2" x2="22" y1="10" y2="10" />
+            </svg>
+          </div>
+          <div class="reassurance-text">
+            <strong>Paiement Sécurisé & Réservation</strong>
+            <span>Carte Bancaire, Apple Pay, Google Pay ou réservation avec règlement sur place</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Catalogue Boutique Adhérents (Directement Accessible) -->
+    <section class="shop-view" id="products-section">
       <div class="container">
-        <!-- Barre unique de filtres + tailles -->
-        <div class="catalog-toolbar">
-          <div class="segmented-control" role="tablist" aria-label="Catégories">
-            <button type="button" class="segmented-btn is-active" data-filter="all" role="tab" aria-selected="true">Tout</button>
-            <button type="button" class="segmented-btn" data-filter="rashguard" role="tab" aria-selected="false">Rashguards</button>
-            <button type="button" class="segmented-btn" data-filter="gants" role="tab" aria-selected="false">Gants MMA</button>
+        <!-- En-tête du catalogue -->
+        <div class="catalog-header">
+          <div class="catalog-title-wrap">
+            <span class="catalog-eyebrow">Catalogue Officiel</span>
+            <h2 class="catalog-title">Équipements Disponibles</h2>
           </div>
 
-          <button type="button" class="btn btn-secondary btn-sm" id="toolbar-size-guide-btn">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z" />
-              <path d="m14.5 12.5 2-2" />
-              <path d="m11.5 9.5 2-2" />
-              <path d="m8.5 6.5 2-2" />
-              <path d="m17.5 15.5 2-2" />
-            </svg>
-            <span>Tailles</span>
-          </button>
+          <div class="catalog-toolbar">
+            <div class="segmented-control" role="tablist" aria-label="Filtrer par catégorie">
+              <button type="button" class="segmented-btn is-active" data-filter="all" role="tab" aria-selected="true">Tous les articles</button>
+              <button type="button" class="segmented-btn" data-filter="rashguard" role="tab" aria-selected="false">Rashguards</button>
+              <button type="button" class="segmented-btn" data-filter="gants" role="tab" aria-selected="false">Gants MMA</button>
+            </div>
+
+            <button type="button" class="btn btn-secondary btn-sm" id="toolbar-size-guide-btn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z" />
+                <path d="m14.5 12.5 2-2" />
+                <path d="m11.5 9.5 2-2" />
+                <path d="m8.5 6.5 2-2" />
+                <path d="m17.5 15.5 2-2" />
+              </svg>
+              <span>Guide des tailles</span>
+            </button>
+          </div>
         </div>
 
-        <!-- Grille produits -->
+        <!-- Grille produits e-commerce -->
         <div class="products-grid" id="products-grid"></div>
       </div>
     </section>
   </main>
 
-  <!-- Pied de page minimal -->
+  <!-- Pied de page e-commerce officiel -->
   <footer class="site-footer">
     <div class="container footer-inner">
-      <div class="footer-brand">
-        <img src="assets/logo.jpg" alt="Logo DORAGON DOJO CLUB" class="footer-logo" />
-        <div class="footer-text">
-          <strong id="footer-club-name">DORAGON DOJO CLUB</strong>
-          <span class="footer-tagline">Boutique Officielle des Adhérents</span>
+      <div class="footer-columns">
+        <div class="footer-col footer-col-brand">
+          <div class="footer-brand">
+            <img src="assets/logo.jpg" alt="Logo DORAGON DOJO CLUB" class="footer-logo" />
+            <div class="footer-text">
+              <strong id="footer-club-name">DORAGON DOJO CLUB</strong>
+              <span class="footer-tagline">Boutique Officielle des Adhérents</span>
+            </div>
+          </div>
+          <p class="footer-desc">
+            Boutique interne réservée aux membres du club. Équipements homologués pour les entraînements de Luta Livre, Grappling et MMA.
+          </p>
         </div>
+
+        <div class="footer-col">
+          <h4 class="footer-col-title">Service Adhérents</h4>
+          <ul class="footer-links">
+            <li><button type="button" class="footer-link-btn" id="footer-size-guide-btn">Guide des tailles</button></li>
+            <li><button type="button" class="footer-link-btn" id="footer-account-btn">Mon Espace Adhérent</button></li>
+            <li><span class="footer-info-item">📍 Retrait direct au dojo lors des cours</span></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4 class="footer-col-title">Paiements Sécurisés</h4>
+          <p class="footer-payment-text">Transactions chiffrées de bout en bout via Stripe.</p>
+          <div class="footer-payment-badges">
+            <span class="pay-badge">CB</span>
+            <span class="pay-badge">Visa</span>
+            <span class="pay-badge">Mastercard</span>
+            <span class="pay-badge">Apple Pay</span>
+            <span class="pay-badge">Google Pay</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>© 2026 DORAGON DOJO CLUB — Tous droits réservés.</span>
+        <span>Boutique officielle des adhérents</span>
       </div>
     </div>
   </footer>
@@ -276,6 +397,7 @@
                 <div class="payment-subpanel" id="club-reservation-panel" hidden>
                   <div class="reservation-simple-notice">
                     <span>🥋 Règlement de <strong class="text-gold" id="reservation-amount-text">0,00 €</strong> à la remise de votre tenue (Espèces ou CB).</span>
+                    <p>Réservation valable 7 jours. Sans retrait et règlement dans ce délai, les articles seront remis en stock. Un rappel est prévu 24 heures avant.</p>
                   </div>
                 </div>
               </div>
@@ -441,6 +563,7 @@
             <input type="password" id="login-password" name="password" required autocomplete="current-password" placeholder="••••••••" />
           </div>
           <div class="account-alert account-alert-error" id="login-error-msg" hidden></div>
+          <button type="button" class="btn-text-link" id="forgot-password-btn">Mot de passe oublié ?</button>
           <button type="submit" class="btn btn-primary btn-full" id="btn-submit-login">
             <span>Se connecter</span>
           </button>
@@ -448,6 +571,22 @@
             <span>Nouveau au club ?</span>
             <button type="button" class="btn-text-link" id="switch-to-register">Créer mon compte adhérent</button>
           </div>
+        </form>
+
+        <form class="account-form" id="forgot-password-form" hidden>
+          <p class="gestion-hint">Recevez un lien pour choisir un nouveau mot de passe.</p>
+          <div class="form-field"><label for="forgot-email">Email adhérent</label><input id="forgot-email" type="email" autocomplete="email" maxlength="254" required /></div>
+          <div class="account-alert" id="forgot-feedback" role="status" hidden></div>
+          <button type="submit" class="btn btn-primary btn-full">Recevoir le lien</button>
+          <button type="button" class="btn-text-link" data-back-to-login>Retour à la connexion</button>
+        </form>
+        <form class="account-form" id="reset-password-form" hidden>
+          <p class="gestion-hint">Choisissez un nouveau mot de passe d’au moins 8 caractères.</p>
+          <div class="form-field"><label for="reset-password">Nouveau mot de passe</label><input id="reset-password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required /></div>
+          <div class="form-field"><label for="reset-password-confirm">Confirmer le mot de passe</label><input id="reset-password-confirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" required /></div>
+          <div class="account-alert" id="reset-feedback" role="status" hidden></div>
+          <button type="submit" class="btn btn-primary btn-full">Enregistrer mon mot de passe</button>
+          <button type="button" class="btn-text-link" data-back-to-login>Retour à la connexion</button>
         </form>
 
         <!-- Formulaire d'Inscription -->
