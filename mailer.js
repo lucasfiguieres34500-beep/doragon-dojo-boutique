@@ -11,6 +11,7 @@ const nodemailer = require('nodemailer');
 
 const ROOT_DIR = __dirname;
 const LOGO_PATH = path.join(ROOT_DIR, 'assets', 'logo.jpg');
+let sharedTransporter;
 
 function escapeHtml(str) {
   return String(str || '')
@@ -28,22 +29,147 @@ function isSmtpConfigured() {
   const user = (process.env.SMTP_USER || '').trim();
   const pass = (process.env.SMTP_PASS || '').trim();
   return Boolean(
-    user &&
-    pass &&
-    !user.includes('votre.email@') &&
-    !pass.includes('votre-mot-de-passe')
+    user && pass && !user.includes('votre.email@') && !pass.includes('votre-mot-de-passe'),
   );
 }
 
 function createTransporter() {
-  return nodemailer.createTransport({
+  if (sharedTransporter) return sharedTransporter;
+  sharedTransporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: Number(process.env.SMTP_PORT) || 465,
     secure: String(process.env.SMTP_SECURE || 'true').toLowerCase() === 'true',
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
     auth: {
       user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
+      pass: process.env.SMTP_PASS,
+    },
+  });
+  return sharedTransporter;
+}
+
+function getSiteUrl() {
+  const url = new URL(process.env.SITE_URL || 'https://doragon-dojo-boutique.onrender.com/');
+  if (
+    url.protocol !== 'https:' &&
+    !(url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))
+  )
+    throw new Error('Adresse du site invalide.');
+  if (url.username || url.password) throw new Error('Adresse du site invalide.');
+  return url.origin + '/';
+}
+
+function buildNoticeEmail({ title, greeting, paragraphs, action, url }) {
+  const club = process.env.CLUB_NAME || 'DORAGON DOJO CLUB';
+  const html = `<!doctype html><html lang="fr"><body style="margin:0;background:#071326;font-family:Arial,sans-serif;color:#f1f5f9;padding:24px 12px"><div style="max-width:560px;margin:auto;background:#0c1e3d;border:1px solid #263650;border-radius:16px;padding:28px"><p style="color:#e5b24c;font-weight:bold">${escapeHtml(club)}</p><h1 style="font-size:24px">${escapeHtml(title)}</h1><p>${escapeHtml(greeting || 'Bonjour,')}</p>${paragraphs.map((p) => `<p style="line-height:1.6">${escapeHtml(p)}</p>`).join('')}${url ? `<p style="margin:28px 0"><a href="${escapeHtml(url)}" style="display:inline-block;padding:14px 20px;background:#e5b24c;color:#071326;font-weight:bold;border-radius:10px;text-decoration:none">${escapeHtml(action || 'Ouvrir la boutique')}</a></p>` : ''}<p style="font-size:12px;color:#b2bfd1">${escapeHtml(club)} · Boutique des adhérents</p></div></body></html>`;
+  const text = [club, title, greeting || 'Bonjour,', ...paragraphs, url || ''].join('\n\n');
+  return { html, text };
+}
+
+async function sendNotice(to, subject, content) {
+  if (!to || !isSmtpConfigured()) return { sent: false, error: 'Envoi email non configuré.' };
+  try {
+    const club = process.env.CLUB_NAME || 'DORAGON DOJO CLUB';
+    await createTransporter().sendMail({
+      from: { name: club, address: process.env.SMTP_USER },
+      to,
+      subject,
+      ...buildNoticeEmail(content),
+    });
+    return { sent: true };
+  } catch {
+    console.error('[Mailer] Un email transactionnel n’a pas pu être envoyé.');
+    return { sent: false, error: 'Envoi email indisponible.' };
+  }
+}
+
+function sendPasswordResetEmail(user, link) {
+  return sendNotice(user.email, 'Réinitialiser votre mot de passe — Doragon Dojo', {
+    title: 'Réinitialiser votre mot de passe',
+    greeting: `Bonjour ${user.name},`,
+    paragraphs: [
+      'Utilisez le lien ci-dessous pour choisir un nouveau mot de passe. Il expire dans 30 minutes et ne peut être utilisé qu’une fois.',
+      'Si vous n’êtes pas à l’origine de cette demande, ignorez cet email. Votre mot de passe reste inchangé.',
+    ],
+    action: 'Choisir mon mot de passe',
+    url: link,
+  });
+}
+
+function sendPasswordChangedEmail(user) {
+  return sendNotice(user.email, 'Votre mot de passe a été modifié — Doragon Dojo', {
+    title: 'Mot de passe modifié',
+    greeting: `Bonjour ${user.name},`,
+    paragraphs: [
+      'Votre nouveau mot de passe est enregistré. Les anciennes sessions ont été fermées.',
+      'Si vous n’avez pas effectué cette modification, contactez le club et demandez immédiatement un nouveau lien de récupération.',
+    ],
+    url: getSiteUrl(),
+    action: 'Accéder à mon compte',
+  });
+}
+
+function sendOrderEventEmail(order, kind) {
+  const deadline = order.workflow?.expiresAt
+    ? new Date(order.workflow.expiresAt).toLocaleString('fr-FR', {
+        timeZone: 'Europe/Paris',
+        dateStyle: 'long',
+        timeStyle: 'short',
+      })
+    : '';
+  const messages = {
+    ready: {
+      title: 'Votre commande est prête au dojo',
+      paragraphs: [
+        `Votre commande ${order.ref} est prête. Présentez votre référence à l’accueil pour la récupérer.`,
+        ...(deadline
+          ? [
+              `Votre réservation est conservée jusqu’au ${deadline}. Le règlement s’effectue au retrait.`,
+            ]
+          : []),
+      ],
+    },
+    reminder: {
+      title: 'Votre réservation expire bientôt',
+      paragraphs: [
+        `Votre réservation ${order.ref} expire le ${deadline}.`,
+        'Récupérez vos articles et réglez votre commande au dojo avant cette date. Ensuite, les articles seront automatiquement remis en stock.',
+      ],
+    },
+    expired: {
+      title: 'Votre réservation a expiré',
+      paragraphs: [
+        `Votre réservation ${order.ref} a expiré sans retrait. Les articles ont été remis en stock. Aucun paiement en ligne n’a été effectué pour cette réservation.`,
+        'Vous pouvez passer une nouvelle commande selon les disponibilités.',
+      ],
+    },
+  };
+  const content = messages[kind];
+  if (!content) return Promise.resolve({ sent: false });
+  return sendNotice(order.memberEmail, `${content.title} — ${order.ref}`, {
+    ...content,
+    greeting: `Bonjour ${order.memberName},`,
+    url: getSiteUrl() + '#orders',
+    action: 'Voir ma commande',
+  });
+}
+
+function sendLowStockEmail(items, threshold) {
+  const recipient =
+    process.env.STOCK_ALERT_EMAIL || process.env.CLUB_EMAIL || process.env.SMTP_USER;
+  return sendNotice(recipient, `Stock à réapprovisionner — ${items.length} taille(s)`, {
+    title: 'Alerte de stock',
+    paragraphs: [
+      `Seuil d’alerte : ${threshold} article(s) par taille.`,
+      ...items.map(
+        (item) =>
+          `${item.name} · ${item.size} : ${item.qty === 0 ? 'rupture de stock' : item.qty + ' restant(s)'}`,
+      ),
+    ],
+    url: getSiteUrl() + 'gestion',
+    action: 'Ouvrir la gestion du stock',
   });
 }
 
@@ -57,7 +183,8 @@ function buildWelcomeEmail(user, clubName, siteUrl) {
   const safePhone = escapeHtml(user.phone || 'Non renseigné');
   const safeRash = escapeHtml(user.favoriteRashguardSize || 'M');
   const safeGloves = escapeHtml(user.favoriteGlovesSize || 'L/XL');
-  const targetUrl = siteUrl || process.env.SITE_URL || 'https://doragon-dojo-boutique.onrender.com';
+  const targetUrl =
+    siteUrl || process.env.SITE_URL || 'https://doragon-dojo-boutique.onrender.com';
 
   const html = `
   <!DOCTYPE html>
@@ -154,7 +281,7 @@ function buildWelcomeEmail(user, clubName, siteUrl) {
     '',
     `Accéder à la boutique : ${targetUrl}`,
     '',
-    `${clubName} — Luta Livre & Grappling`
+    `${clubName} — Luta Livre & Grappling`,
   ].join('\n');
 
   return { html, text };
@@ -170,13 +297,16 @@ function buildOrderConfirmationEmail(order, clubName, siteUrl) {
   const safeDate = escapeHtml(order.dateLabel);
   const safePayment = escapeHtml(order.paymentMethod);
   const safeStatus = escapeHtml(order.paymentStatus || 'Validé');
-  const targetUrl = siteUrl || process.env.SITE_URL || 'https://doragon-dojo-boutique.onrender.com';
+  const targetUrl =
+    siteUrl || process.env.SITE_URL || 'https://doragon-dojo-boutique.onrender.com';
 
   const isOnline = safePayment.toLowerCase().includes('en ligne');
   const badgeLabel = isOnline ? 'Paiement Validé (CB)' : 'Réservation Enregistrée';
   const badgeColor = isOnline ? '#10b981' : '#e5b24c';
 
-  const itemsHtml = order.items.map((item) => `
+  const itemsHtml = order.items
+    .map(
+      (item) => `
     <tr>
       <td style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06);color:#f1f5f9;font-weight:600;font-size:13px;">
         ${escapeHtml(item.name)}<br/>
@@ -189,7 +319,9 @@ function buildOrderConfirmationEmail(order, clubName, siteUrl) {
         ${formatEuro(item.lineTotal)}
       </td>
     </tr>
-  `).join('');
+  `,
+    )
+    .join('');
 
   const html = `
   <!DOCTYPE html>
@@ -286,15 +418,39 @@ function buildOrderConfirmationEmail(order, clubName, siteUrl) {
     order.memberNote ? `Remarque : ${order.memberNote}` : null,
     '',
     'Articles commandés :',
-    ...order.items.map((i) => `- ${i.qty}x ${i.name} (${i.size}) : ${formatEuro(i.lineTotal)}`),
+    ...order.items.map(
+      (i) => `- ${i.qty}x ${i.name} (${i.size}) : ${formatEuro(i.lineTotal)}`,
+    ),
     '',
     `TOTAL : ${formatEuro(order.total)}`,
     'Retrait direct au club lors de votre prochain entraînement.',
     '',
-    `Télécharger votre reçu PDF officiel dans votre espace adhérent : ${targetUrl}`
-  ].filter(Boolean).join('\n');
+    `Télécharger votre reçu PDF officiel dans votre espace adhérent : ${targetUrl}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
 
-  return { html, text };
+  const expiresAt = order.workflow?.expiresAt;
+  const notice = expiresAt
+    ? 'Réservation valable jusqu’au ' +
+      new Date(expiresAt).toLocaleString('fr-FR', {
+        timeZone: 'Europe/Paris',
+        dateStyle: 'long',
+        timeStyle: 'short',
+      }) +
+      '. Sans retrait et règlement dans ce délai, les articles seront remis en stock.'
+    : '';
+  return {
+    html: notice
+      ? html.replace(
+          '</body>',
+          '<p style="max-width:600px;margin:20px auto;padding:16px;font-family:Arial,sans-serif;line-height:1.5">' +
+            escapeHtml(notice) +
+            '</p></body>',
+        )
+      : html,
+    text: text + (notice ? '\n\n' + notice : ''),
+  };
 }
 
 // ------------------------------------------------------------
@@ -305,7 +461,9 @@ async function sendWelcomeEmail(user, clubName) {
   const effectiveClub = clubName || process.env.CLUB_NAME || 'DORAGON DOJO CLUB';
 
   if (!isSmtpConfigured()) {
-    console.log(`[Mailer] Simulation Bienvenue (SMTP non configuré) pour ${user.email} (${user.name})`);
+    console.log(
+      `[Mailer] Simulation Bienvenue (SMTP non configuré) pour ${user.email} (${user.name})`,
+    );
     return { sent: false, simulated: true };
   }
 
@@ -322,7 +480,7 @@ async function sendWelcomeEmail(user, clubName) {
       subject: `🥋 Bienvenue au dojo — Votre compte adhérent ${effectiveClub}`,
       text,
       html,
-      attachments
+      attachments,
     });
 
     console.log(`[Mailer] Email de bienvenue envoyé avec succès à ${user.email}`);
@@ -338,7 +496,9 @@ async function sendOrderConfirmationEmail(order, clubName, clubEmail) {
   const effectiveClub = clubName || process.env.CLUB_NAME || 'DORAGON DOJO CLUB';
 
   if (!isSmtpConfigured()) {
-    console.log(`[Mailer] Simulation Confirmation Commande (SMTP non configuré) pour ${order.memberEmail} (${order.ref})`);
+    console.log(
+      `[Mailer] Simulation Confirmation Commande (SMTP non configuré) pour ${order.memberEmail} (${order.ref})`,
+    );
     return { sent: false, simulated: true };
   }
 
@@ -355,7 +515,7 @@ async function sendOrderConfirmationEmail(order, clubName, clubEmail) {
       subject: `📄 Confirmation commande ${order.ref} — ${effectiveClub}`,
       text,
       html,
-      attachments
+      attachments,
     };
 
     const bccEmail = (clubEmail || process.env.CLUB_EMAIL || '').trim();
@@ -364,18 +524,29 @@ async function sendOrderConfirmationEmail(order, clubName, clubEmail) {
     }
 
     await transporter.sendMail(mailOptions);
-    console.log(`[Mailer] Email confirmation commande envoyé avec succès à ${order.memberEmail} (${order.ref})`);
+    console.log(
+      `[Mailer] Email confirmation commande envoyé avec succès à ${order.memberEmail} (${order.ref})`,
+    );
     return { sent: true };
   } catch (err) {
-    console.error(`[Mailer] Erreur envoi confirmation commande à ${order.memberEmail} :`, err.message);
+    console.error(
+      `[Mailer] Erreur envoi confirmation commande à ${order.memberEmail} :`,
+      err.message,
+    );
     return { sent: false, error: err.message };
   }
 }
 
 module.exports = {
+  getSiteUrl,
+  buildNoticeEmail,
+  sendPasswordResetEmail,
+  sendPasswordChangedEmail,
+  sendOrderEventEmail,
+  sendLowStockEmail,
   isSmtpConfigured,
   buildWelcomeEmail,
   buildOrderConfirmationEmail,
   sendWelcomeEmail,
-  sendOrderConfirmationEmail
+  sendOrderConfirmationEmail,
 };

@@ -30,12 +30,36 @@ const {
   createOrderService,
 } = require('./orders.js');
 const orderService = createOrderService({ db, mailer });
+const { createShopOperations } = require('./shop-operations.js');
+const { createPasswordReset, createRateLimiter } = require('./password-reset.js');
+const { lowStockItems } = require('./order-workflow.js');
+const configuredThreshold = Number.parseInt(process.env.LOW_STOCK_THRESHOLD ?? '2', 10);
+const operations = createShopOperations({
+  db,
+  mailer,
+  orderService,
+  threshold: Number.isFinite(configuredThreshold) ? Math.max(0, Math.min(100, configuredThreshold)) : 2,
+});
+const resetService = createPasswordReset({
+  db,
+  mailer,
+  siteUrl: mailer.getSiteUrl(),
+  invalidateSessions(userId) {
+    for (const [token, session] of activeMemberSessions)
+      if (session.userId === userId) activeMemberSessions.delete(token);
+  },
+});
+const rateAllowed = createRateLimiter();
+function runMaintenance() {
+  operations
+    .tick()
+    .catch(() => console.error('[Boutique] Traitement automatique à réessayer.'));
+}
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 const ROOT_DIR = __dirname;
 const DATA_DIR = path.join(ROOT_DIR, 'data');
-const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
 const AUTH_FILE = path.join(DATA_DIR, 'admin-auth.json');
 const UPLOADS_DIR = path.join(ROOT_DIR, 'assets', 'uploads');
 const SESSION_COOKIE = 'club_admin_session';
@@ -236,13 +260,19 @@ async function getAuthenticatedMember(req) {
     activeMemberSessions.delete(token);
     return null;
   }
-  return await db.findUserById(session.userId);
+  const user = await db.findUserById(session.userId);
+  if (!user || user.hash !== session.passwordHash) {
+    activeMemberSessions.delete(token);
+    return null;
+  }
+  return user;
 }
 
-function createMemberSession(userId) {
+function createMemberSession(userId, passwordHash) {
   const token = crypto.randomBytes(32).toString('hex');
   activeMemberSessions.set(token, {
     userId,
+    passwordHash,
     expiresAt: Date.now() + MEMBER_SESSION_TTL_MS,
   });
   return `${MEMBER_SESSION_COOKIE}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${MEMBER_SESSION_TTL_MS / 1000}`;
@@ -301,6 +331,7 @@ function serveStatic(reqPath, res) {
       'Cache-Control': isAsset ? 'public, max-age=3600' : 'no-cache',
       ETag: etag,
       'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'no-referrer',
     });
     const stream = fs.createReadStream(fullPath);
     stream.on('error', () => res.destroy());
@@ -310,6 +341,111 @@ function serveStatic(reqPath, res) {
 
 async function handleRequest(req, res) {
   const urlPath = (req.url || '/').split('?')[0];
+  if (
+    [
+      '/api/products',
+      '/api/stock',
+      '/api/orders',
+      '/api/member/me',
+      '/api/create-payment-intent',
+      '/api/admin/orders/status',
+    ].includes(urlPath)
+  )
+    await operations.expireReservations();
+  if (urlPath.startsWith('/api/')) runMaintenance();
+
+  if (req.method === 'POST' && urlPath === '/api/member/forgot-password') {
+    const client = req.socket?.remoteAddress || 'unknown';
+    if (!rateAllowed('forgot-ip:' + client, 100, 15 * 60000))
+      return sendJson(res, 429, {
+        ok: false,
+        error: 'Trop de demandes. Réessayez plus tard.',
+      });
+    if (!mailer.isSmtpConfigured())
+      return sendJson(res, 503, {
+        ok: false,
+        error:
+          'La récupération par email est temporairement indisponible. Contactez le club.',
+      });
+    const body = await readJsonBody(req);
+    const email = String(body.email || '')
+      .trim()
+      .toLowerCase();
+    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return sendJson(res, 400, { ok: false, error: 'Saisissez une adresse email valide.' });
+    const emailKey = crypto.createHash('sha256').update(email).digest('hex');
+    const allowed = rateAllowed('forgot-email:' + emailKey, 3, 60 * 60000);
+    sendJson(res, 200, {
+      ok: true,
+      message:
+        'Si un compte correspond à cette adresse, vous recevrez un lien valable 30 minutes. Pensez à vérifier vos courriers indésirables.',
+    });
+    if (allowed)
+      resetService
+        .request(email)
+        .catch(() => console.error('[Compte] Envoi du lien de récupération indisponible.'));
+    return;
+  }
+
+  if (req.method === 'POST' && urlPath === '/api/member/reset-password') {
+    if (!rateAllowed('reset:' + (req.socket?.remoteAddress || 'unknown'), 20, 15 * 60000))
+      return sendJson(res, 429, {
+        ok: false,
+        error: 'Trop de tentatives. Réessayez plus tard.',
+      });
+    try {
+      const body = await readJsonBody(req);
+      await resetService.reset(body.token, body.password);
+      return sendJson(res, 200, { ok: true }, { 'Set-Cookie': clearMemberSession(req) });
+    } catch (error) {
+      return sendJson(res, 400, { ok: false, error: error.message });
+    }
+  }
+
+  if (req.method === 'GET' && urlPath === '/api/admin/alerts') {
+    if (!isAuthenticated(req))
+      return sendJson(res, 401, { ok: false, error: 'Authentification requise.' });
+    return sendJson(res, 200, {
+      ok: true,
+      threshold: operations.threshold,
+      reservationDays: 7,
+      emailConfigured: mailer.isSmtpConfigured(),
+      webhookConfigured: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
+      items: lowStockItems(await db.getProducts(), await db.getStock(), operations.threshold),
+    });
+  }
+
+  if (req.method === 'POST' && urlPath === '/api/admin/orders/status') {
+    if (!isAuthenticated(req))
+      return sendJson(res, 401, { ok: false, error: 'Authentification requise.' });
+    try {
+      const body = await readJsonBody(req);
+      const order = await operations.setStatus(String(body.ref || ''), body.status);
+      operations
+        .tick({ force: true })
+        .catch(() => console.error('[Boutique] Notification en attente.'));
+      return sendJson(res, 200, {
+        ok: true,
+        order,
+        emailConfigured: mailer.isSmtpConfigured(),
+      });
+    } catch (error) {
+      return sendJson(res, error.status || 500, { ok: false, error: error.message });
+    }
+  }
+
+  if (req.method === 'POST' && urlPath === '/api/jobs') {
+    const expected = process.env.JOBS_SECRET || '';
+    const actual = String(req.headers.authorization || '').replace(/^Bearer /, '');
+    if (
+      !expected ||
+      Buffer.byteLength(actual) !== Buffer.byteLength(expected) ||
+      !crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expected))
+    )
+      return sendJson(res, 401, { ok: false });
+    await operations.tick({ force: true });
+    return sendJson(res, 200, { ok: true });
+  }
 
   if (req.method === 'GET' && urlPath === '/api/health') {
     return sendJson(res, 200, {
@@ -554,7 +690,7 @@ async function handleRequest(req, res) {
         .sendWelcomeEmail(newUser)
         .catch((e) => console.error('[Mailer] Erreur welcome:', e.message));
 
-      const cookie = createMemberSession(newUser.id);
+      const cookie = createMemberSession(newUser.id, newUser.hash);
       return sendJson(
         res,
         200,
@@ -593,7 +729,7 @@ async function handleRequest(req, res) {
         return sendJson(res, 401, { ok: false, error: 'Email ou mot de passe incorrect.' });
       }
 
-      const cookie = createMemberSession(user.id);
+      const cookie = createMemberSession(user.id, user.hash);
       const memberOrders = await db.getOrdersForMember(user.id, user.email);
 
       return sendJson(
@@ -646,7 +782,7 @@ async function handleRequest(req, res) {
       return sendJson(res, 401, { ok: false, error: 'Authentification requise.' });
     }
     const users = (await db.getUsers()).map(sanitizeUser);
-    const orders = await db.getAllOrders();
+    const orders = (await db.getAllOrders()).filter((order) => !order.workflow?.archivedAt);
     const membersWithStats = users.map((u) => {
       const uOrders = orders.filter(
         (o) =>
@@ -699,9 +835,8 @@ async function handleRequest(req, res) {
     if (!isAuthenticated(req)) {
       return sendJson(res, 401, { ok: false, error: 'Authentification requise.' });
     }
-    ensureDataDir();
-    fs.writeFileSync(ORDERS_FILE, '[]', 'utf8');
-    return sendJson(res, 200, { ok: true, orders: [] });
+    const orders = await operations.archiveCompleted();
+    return sendJson(res, 200, { ok: true, orders });
   }
 
   if (req.method === 'GET' && urlPath === '/api/products') {
@@ -890,8 +1025,13 @@ const server = http.createServer((req, res) => {
     else res.destroy();
   });
 });
-if (require.main === module)
+if (require.main === module) {
+  runMaintenance();
+  const timer = setInterval(runMaintenance, 60000);
+  timer.unref();
+  server.on('close', () => clearInterval(timer));
   server.listen(PORT, HOST, () =>
     console.log('Serveur DORAGON DOJO CLUB prêt sur http://' + HOST + ':' + PORT),
   );
+}
 module.exports = server;

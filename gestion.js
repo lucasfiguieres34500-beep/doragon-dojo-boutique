@@ -28,6 +28,7 @@
     members: [],
     settings: { ...DEFAULT_SETTINGS, ...loadJson(STORAGE_KEYS.SETTINGS, {}) },
     pendingImageDataUrl: null,
+    orderFilter: 'all',
   };
 
   const els = {
@@ -149,6 +150,7 @@
     els.authError.hidden = true;
     await syncFromServer();
     await fetchAndRenderMembers();
+    await refreshAlerts();
     renderStats();
     renderStockCards();
     renderOrders();
@@ -251,6 +253,7 @@
         stockUpdateBusy = false;
         renderStats();
         renderStockCards();
+        if (state.authenticated) refreshAlerts();
       }
       return;
     }
@@ -513,13 +516,18 @@
   }
 
   function renderOrders() {
-    if (state.orders.length === 0) {
+    const filtered = state.orders.filter(
+      (order) =>
+        state.orderFilter === 'all' ||
+        (order.workflow?.status || 'preparing') === state.orderFilter,
+    );
+    if (filtered.length === 0) {
       els.ordersList.innerHTML =
         '<p style="color:var(--ink-muted);font-size:0.9rem;margin:0;">Aucune commande enregistrée pour le moment.</p>';
       return;
     }
 
-    els.ordersList.innerHTML = state.orders
+    els.ordersList.innerHTML = filtered
       .map(
         (order) => `
       <div class="admin-order-row">
@@ -533,10 +541,70 @@
         <div>
           ${order.items.map((i) => `${i.qty}× ${escapeHtml(i.name)} (${escapeHtml(i.size)})`).join(' · ')}
         </div>
+        ${renderOrderActions(order)}
       </div>
     `,
       )
       .join('');
+  }
+
+  function renderOrderActions(order) {
+    const labels = {
+      preparing: 'À préparer',
+      ready: 'Prête au dojo',
+      collected: 'Récupérée',
+      expired: 'Réservation expirée',
+    };
+    const status = labels[order.workflow?.status] ? order.workflow.status : 'preparing';
+    const active = ['preparing', 'ready'].includes(status);
+    const expiry = Date.parse(order.workflow?.expiresAt);
+    const paidOnline = /stripe|en ligne/i.test(order.paymentMethod || '');
+    return `<div class="order-progress"><strong class="order-status order-status-${status}">${labels[status]}</strong>${active && Number.isFinite(expiry) ? `<span>Réservée jusqu’au ${escapeHtml(new Date(expiry).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'short', timeStyle: 'short' }))}</span>` : ''}</div>
+      <div class="order-management-actions">${status === 'preparing' ? `<button type="button" class="btn btn-secondary btn-sm" data-order-status="ready" data-ref="${escapeHtml(order.ref)}">Marquer prête</button>` : ''}${active ? `<button type="button" class="btn btn-primary btn-sm" data-order-status="collected" data-ref="${escapeHtml(order.ref)}">${paidOnline ? 'Marquer récupérée' : 'Récupérée et réglée au dojo'}</button>` : ''}</div>`;
+  }
+
+  async function refreshAlerts() {
+    const container = document.getElementById('low-stock-alerts');
+    try {
+      const response = await fetch('/api/admin/alerts');
+      if (response.status === 401) {
+        showAuthGate();
+        return;
+      }
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error();
+      document.getElementById('email-configuration-status').textContent = data.emailConfigured
+        ? `Alertes email activées à ${data.threshold} article(s) ou moins par taille.`
+        : 'Alertes visibles ci-dessous. Les emails nécessitent la configuration SMTP du serveur.';
+      container.innerHTML = data.items.length
+        ? data.items
+            .map(
+              (item) =>
+                `<div class="low-stock-row"><span><strong>${escapeHtml(item.name)}</strong> · ${escapeHtml(item.size)}</span><span class="order-status ${item.qty === 0 ? 'order-status-expired' : 'order-status-ready'}">${item.qty === 0 ? 'Rupture' : item.qty + ' restant(s)'}</span></div>`,
+            )
+            .join('')
+        : '<p class="gestion-hint">Aucune taille sous le seuil d’alerte.</p>';
+    } catch {
+      container.textContent = 'Impossible de charger les alertes. Utilisez « Actualiser ».';
+    }
+  }
+
+  async function refreshOrders() {
+    try {
+      const response = await fetch('/api/orders');
+      if (response.status === 401) {
+        showAuthGate();
+        return;
+      }
+      const data = await response.json();
+      if (!response.ok || !Array.isArray(data.orders)) throw new Error();
+      state.orders = data.orders;
+      saveJson(STORAGE_KEYS.ORDERS, state.orders);
+      renderOrders();
+      renderStats();
+    } catch {
+      showToast('Impossible d’actualiser les commandes. Réessayez.');
+    }
   }
 
   async function fetchAndRenderMembers() {
@@ -640,6 +708,59 @@
   }
 
   function bindEvents() {
+    document.getElementById('refresh-alerts-btn').addEventListener('click', refreshAlerts);
+    document.getElementById('refresh-orders-btn').addEventListener('click', refreshOrders);
+    document.getElementById('order-status-filter').addEventListener('change', (event) => {
+      state.orderFilter = event.target.value;
+      renderOrders();
+    });
+    els.ordersList.addEventListener('click', async (event) => {
+      const button = event.target.closest('[data-order-status]');
+      if (!button || button.disabled) return;
+      const row = button.closest('.admin-order-row');
+      row.querySelectorAll('button').forEach((el) => {
+        el.disabled = true;
+      });
+      try {
+        const response = await fetch('/api/admin/orders/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ref: button.dataset.ref,
+            status: button.dataset.orderStatus,
+          }),
+        });
+        if (response.status === 401) {
+          showAuthGate();
+          return;
+        }
+        const data = await response.json();
+        if (!response.ok || !data.ok)
+          throw new Error(data.error || 'Modification non enregistrée.');
+        state.orders = state.orders.map((order) =>
+          order.ref === data.order.ref ? data.order : order,
+        );
+        saveJson(STORAGE_KEYS.ORDERS, state.orders);
+        renderOrders();
+        showToast(
+          button.dataset.orderStatus === 'ready'
+            ? data.emailConfigured
+              ? 'Commande prête. Notification email programmée.'
+              : 'Commande prête. Email en attente de configuration SMTP.'
+            : 'Retrait enregistré.',
+        );
+      } catch (error) {
+        showToast(
+          error.message === 'Failed to fetch'
+            ? 'Connexion interrompue. Statut inchangé.'
+            : error.message,
+        );
+      } finally {
+        row.querySelectorAll('button').forEach((el) => {
+          el.disabled = false;
+        });
+      }
+    });
     els.togglePasswordBtn.addEventListener('click', () => {
       const isHidden = els.authPassword.type === 'password';
       els.authPassword.type = isHidden ? 'text' : 'password';
@@ -756,17 +877,18 @@
             showAuthGate();
             return;
           }
-          if (!res.ok) throw new Error('Suppression refusée');
+          if (!res.ok) throw new Error('Archivage refusé');
+          const data = await res.json();
+          state.orders = data.orders;
         } catch {
           showToast('Historique non modifié. Réessayez.');
           return;
         }
       }
-      state.orders = [];
-      saveJson(STORAGE_KEYS.ORDERS, []);
+      saveJson(STORAGE_KEYS.ORDERS, state.orders);
       renderStats();
       renderOrders();
-      showToast('Historique vidé');
+      showToast('Commandes terminées archivées. Les commandes en cours sont conservées.');
     });
 
     els.settingsForm.addEventListener('submit', (e) => {

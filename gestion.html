@@ -201,6 +201,11 @@
         </div>
       </section>
 
+      <section class="gestion-section" aria-labelledby="stock-alerts-title">
+        <div class="gestion-section-head"><h2 id="stock-alerts-title">Alertes de stock</h2><button type="button" class="btn btn-secondary btn-sm" id="refresh-alerts-btn">Actualiser</button></div>
+        <div class="gestion-panel"><p class="gestion-hint" id="email-configuration-status" role="status"></p><div id="low-stock-alerts" aria-live="polite">Chargement des alertes…</div></div>
+      </section>
+
       <!-- Gestion simple du stock -->
       <section class="gestion-section">
         <div class="gestion-section-head">
@@ -236,10 +241,12 @@
           <h2>Commandes des adhérents</h2>
           <div class="admin-orders-btns">
             <button type="button" class="btn btn-secondary btn-sm" id="gestion-export-csv">Exporter CSV</button>
-            <button type="button" class="btn btn-ghost btn-sm" id="gestion-clear-orders">Vider</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="refresh-orders-btn">Actualiser</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="gestion-clear-orders">Archiver les terminées</button>
           </div>
         </div>
         <div class="gestion-panel">
+          <div class="form-field order-filter-field"><label for="order-status-filter">Afficher les commandes</label><select id="order-status-filter"><option value="all">Toutes les commandes</option><option value="preparing">À préparer</option><option value="ready">Prêtes au dojo</option><option value="collected">Récupérées</option><option value="expired">Réservations expirées</option></select></div>
           <div id="gestion-orders-list" class="admin-orders-list"></div>
         </div>
       </section>

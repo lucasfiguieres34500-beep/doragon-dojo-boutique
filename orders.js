@@ -1,5 +1,6 @@
 'use strict';
 const crypto = require('crypto');
+const { DAY } = require('./order-workflow.js');
 
 class OrderError extends Error {
   constructor(message, status = 400, extra = {}) {
@@ -100,10 +101,15 @@ function readPaymentItems(metadata) {
   return items;
 }
 
-function createOrderService({ db, mailer }) {
+function createOrderService({ db, mailer, now = Date.now, reservationDays = 7 }) {
   let queue = Promise.resolve();
+  let beforeStockWork = async () => {};
   function withStockLock(work) {
-    const result = queue.then(work, work);
+    const guarded = async () => {
+      await beforeStockWork();
+      return work();
+    };
+    const result = queue.then(guarded, guarded);
     queue = result.catch(() => {});
     return result;
   }
@@ -180,6 +186,7 @@ function createOrderService({ db, mailer }) {
       dateLabel: new Date().toLocaleString('fr-FR'),
       paymentMethod: 'Paiement en ligne (Stripe)',
       paymentStatus: 'Payé en ligne (Stripe)',
+      workflow: { status: 'preparing', updatedAt: new Date(now()).toISOString() },
       stripePaymentIntent: intent.id,
       total: intent.amount_received / 100,
       items,
@@ -210,13 +217,25 @@ function createOrderService({ db, mailer }) {
       dateLabel: new Date().toLocaleString('fr-FR'),
       paymentMethod: 'Retrait au dojo (Réservation - Paiement sur place)',
       paymentStatus: 'À régler au dojo',
+      workflow: {
+        status: 'preparing',
+        updatedAt: new Date(now()).toISOString(),
+        expiresAt: new Date(now() + reservationDays * DAY).toISOString(),
+      },
       memberNote: '',
       total: totalCents(items) / 100,
       items,
     });
   }
 
-  return { withStockLock, confirmPayment, reserve };
+  return {
+    withStockLock,
+    confirmPayment,
+    reserve,
+    setBeforeStockWork(fn) {
+      beforeStockWork = fn;
+    },
+  };
 }
 
 module.exports = {

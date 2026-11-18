@@ -6,6 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { packNote, unpackNote } = require('./order-workflow.js');
 
 // Polyfill WebSocket pour les environnements Node < 22 (comme certains conteneurs Render)
 if (typeof global.WebSocket === 'undefined') {
@@ -17,13 +18,18 @@ if (typeof global.WebSocket === 'undefined') {
 }
 
 const { createClient } = require('@supabase/supabase-js');
-const { PRODUCTS: DEFAULT_PRODUCTS, createDefaultStock, normalizeStock } = require('./catalog.js');
+const {
+  PRODUCTS: DEFAULT_PRODUCTS,
+  createDefaultStock,
+  normalizeStock,
+} = require('./catalog.js');
 
 const DATA_DIR = path.join(__dirname, 'data');
 const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
 const STOCK_FILE = path.join(DATA_DIR, 'stock.json');
 const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const OPERATIONS_FILE = path.join(DATA_DIR, 'operations.json');
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -83,7 +89,70 @@ function readLocalJson(filePath, fallback = []) {
 
 function writeLocalJson(filePath, data) {
   ensureDataDir();
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+  const temporary = filePath + '.tmp';
+  fs.writeFileSync(temporary, JSON.stringify(data, null, 2), 'utf8');
+  fs.renameSync(temporary, filePath);
+}
+
+function getOperationsState() {
+  if (!fs.existsSync(OPERATIONS_FILE)) return {};
+  return JSON.parse(fs.readFileSync(OPERATIONS_FILE, 'utf8'));
+}
+
+function saveOperationsState(state) {
+  writeLocalJson(OPERATIONS_FILE, state);
+}
+
+async function replacePassword(id, expectedHash, credentials) {
+  const user = await findUserById(id);
+  if (!user || user.hash !== expectedHash) return false;
+  if (isSupabaseActive()) {
+    const { data, error } = await supabase
+      .from('members')
+      .update(credentials)
+      .eq('id', id)
+      .eq('hash', expectedHash)
+      .select('id');
+    if (error) throw new Error('Le mot de passe n’a pas pu être enregistré. Réessayez.');
+    if (!data?.length) return false;
+  }
+  const users = readLocalJson(USERS_FILE, []);
+  const index = users.findIndex((entry) => entry.id === id);
+  const updated = { ...user, ...credentials };
+  if (index >= 0) users[index] = updated;
+  else users.push(updated);
+  writeLocalJson(USERS_FILE, users);
+  return true;
+}
+
+function orderRow(order) {
+  return {
+    ref: order.ref,
+    member_id: order.memberId || null,
+    created_at: order.createdAt,
+    date_label: order.dateLabel,
+    member_name: order.memberName,
+    member_email: order.memberEmail,
+    member_phone: order.memberPhone || '',
+    payment_method: order.paymentMethod,
+    payment_status: order.paymentStatus,
+    member_note: packNote(order),
+    total: Number(order.total),
+    items: order.items,
+  };
+}
+
+async function updateOrder(order) {
+  if (isSupabaseActive()) {
+    const { error } = await supabase.from('orders').upsert(orderRow(order));
+    if (error) throw new Error('La mise à jour de la commande n’a pas été enregistrée.');
+  }
+  const orders = readLocalJson(ORDERS_FILE, []);
+  const index = orders.findIndex((entry) => entry.ref === order.ref);
+  if (index < 0) orders.unshift(order);
+  else orders[index] = order;
+  writeLocalJson(ORDERS_FILE, orders);
+  return order;
 }
 
 // ------------------------------------------------------------
@@ -131,7 +200,8 @@ async function findUserByEmail(email) {
         .select('*')
         .ilike('email', cleanEmail)
         .maybeSingle();
-
+      if (error) throw error;
+      if (!data) return null;
       if (!error && data) {
         return {
           id: data.id,
@@ -146,7 +216,7 @@ async function findUserByEmail(email) {
         };
       }
     } catch (err) {
-      console.warn('[Supabase] Exception findUserByEmail :', err.message);
+      throw new Error('Connexion au compte indisponible. Réessayez dans un instant.');
     }
   }
 
@@ -159,8 +229,13 @@ async function findUserById(id) {
 
   if (isSupabaseActive()) {
     try {
-      const { data, error } = await supabase.from('members').select('*').eq('id', id).maybeSingle();
-
+      const { data, error } = await supabase
+        .from('members')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
       if (!error && data) {
         return {
           id: data.id,
@@ -175,7 +250,7 @@ async function findUserById(id) {
         };
       }
     } catch (err) {
-      console.warn('[Supabase] Exception findUserById :', err.message);
+      throw new Error('Connexion au compte indisponible. Réessayez dans un instant.');
     }
   }
 
@@ -236,7 +311,21 @@ async function updateUserProfile(id, updates) {
         : user.favoriteGlovesSize,
   };
 
-  return await saveUser(updated);
+  // Un changement de profil ne doit jamais rétablir un ancien mot de passe.
+  if (isSupabaseActive()) {
+    const { data, error } = await supabase.from('members').update({
+      name: updated.name, phone: updated.phone,
+      favorite_rashguard_size: updated.favoriteRashguardSize,
+      favorite_gloves_size: updated.favoriteGlovesSize,
+    }).eq('id', id).eq('hash', user.hash).select('id');
+    if (error || !data?.length) throw new Error('Profil non enregistré. Reconnectez-vous et réessayez.');
+  }
+  const local = readLocalJson(USERS_FILE, []);
+  const index = local.findIndex(entry => entry.id === id);
+  if (index >= 0) local[index] = { ...updated, salt: local[index].salt, hash: local[index].hash };
+  else local.push(updated);
+  writeLocalJson(USERS_FILE, local);
+  return updated;
 }
 
 // ------------------------------------------------------------
@@ -264,7 +353,7 @@ async function getAllOrders() {
           memberPhone: row.member_phone,
           paymentMethod: row.payment_method,
           paymentStatus: row.payment_status,
-          memberNote: row.member_note || '',
+          ...unpackNote(row.member_note),
           total: Number(row.total) || 0,
           items: Array.isArray(row.items) ? row.items : [],
         }));
@@ -290,7 +379,8 @@ async function getOrdersForMember(memberId, memberEmail) {
 
   return all.filter((o) => {
     if (memberId && o.memberId === memberId) return true;
-    if (cleanEmail && o.memberEmail && o.memberEmail.toLowerCase() === cleanEmail) return true;
+    if (cleanEmail && o.memberEmail && o.memberEmail.toLowerCase() === cleanEmail)
+      return true;
     return false;
   });
 }
@@ -316,7 +406,7 @@ async function saveOrder(order) {
         member_phone: order.memberPhone || '',
         payment_method: order.paymentMethod,
         payment_status: order.paymentStatus,
-        member_note: order.memberNote || '',
+        member_note: packNote(order),
         total: Number(order.total) || 0,
         items: order.items,
       };
@@ -366,7 +456,7 @@ async function getStock() {
   }
 }
 
-async function saveStock(stock) {
+async function saveStock(stock, { strict = false } = {}) {
   const products = await getProducts();
   const normalized = normalizeStock(stock, products);
 
@@ -391,9 +481,13 @@ async function saveStock(stock) {
         const { error } = await supabase
           .from('stock')
           .upsert(rows, { onConflict: 'product_id,size' });
-        if (error) console.error('[Supabase] Erreur upsert stock :', error.message);
+        if (error) {
+          if (strict) throw new Error('Stock distant indisponible.');
+          console.error('[Supabase] Erreur upsert stock :', error.message);
+        }
       }
     } catch (err) {
+      if (strict) throw err;
       console.error('[Supabase] Exception upsert stock :', err.message);
     }
   }
@@ -434,8 +528,12 @@ async function getProducts() {
             image:
               defaultProd.image ||
               row.image ||
-              (cat === 'gants' ? 'assets/gants-mma.jpg' : 'assets/rashguard-mc-front-white.jpg'),
-            images: defaultProd.images || [{ src: defaultProd.image || row.image, label: 'Face' }],
+              (cat === 'gants'
+                ? 'assets/gants-mma.jpg'
+                : 'assets/rashguard-mc-front-white.jpg'),
+            images: defaultProd.images || [
+              { src: defaultProd.image || row.image, label: 'Face' },
+            ],
             description: '',
             shortDesc: '',
             badge: '',
@@ -500,6 +598,10 @@ async function saveProducts(products) {
 }
 
 module.exports = {
+  replacePassword,
+  updateOrder,
+  getOperationsState,
+  saveOperationsState,
   isSupabaseConfigured: isSupabaseActive,
   getUsers,
   findUserByEmail,

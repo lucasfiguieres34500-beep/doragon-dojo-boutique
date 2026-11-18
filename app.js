@@ -844,33 +844,33 @@
         appearance: {
           theme: 'night',
           variables: {
-            colorPrimary: '#e5b24c',
-            colorBackground: '#0c1e3d',
-            colorText: '#f1f5f9',
-            colorDanger: '#ef4444',
+            colorPrimary: '#bfb19b',
+            colorBackground: '#202020',
+            colorText: '#f3f0ea',
+            colorDanger: '#d79c96',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            borderRadius: '10px',
+            borderRadius: '4px',
             spacingUnit: '4px',
           },
           rules: {
             '.Tab': {
               border: '1px solid rgba(255, 255, 255, 0.12)',
-              backgroundColor: '#071326',
+              backgroundColor: '#171717',
             },
             '.Tab:hover': {
-              border: '1px solid #e5b24c',
+              border: '1px solid #bfb19b',
             },
             '.Tab--selected': {
-              borderColor: '#e5b24c',
-              backgroundColor: 'rgba(229, 178, 76, 0.12)',
+              borderColor: '#bfb19b',
+              backgroundColor: 'rgba(191, 177, 155, 0.12)',
             },
             '.Input': {
               border: '1px solid rgba(255, 255, 255, 0.15)',
-              backgroundColor: '#071326',
+              backgroundColor: '#171717',
             },
             '.Input:focus': {
-              border: '1px solid #e5b24c',
-              boxShadow: '0 0 0 1px #e5b24c',
+              border: '1px solid #bfb19b',
+              boxShadow: '0 0 0 1px #bfb19b',
             },
           },
         },
