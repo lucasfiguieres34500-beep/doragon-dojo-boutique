@@ -19,7 +19,8 @@
       images: [
         { src: 'assets/rashguard-mc-front-white.jpg', label: 'Face' },
         { src: 'assets/rashguard-mc-back-white.jpg', label: 'Dos' },
-        { src: 'assets/rashguard-luta-livre.jpg', label: 'Vue 360°' }
+        { src: 'assets/rashguard-mc-side-white.jpg', label: 'Profil' },
+        { src: 'assets/rashguard-mc-detail-white.jpg', label: 'Détail' }
       ],
       badge: '',
       shortDesc: '',
