@@ -140,10 +140,11 @@ body.modal-open .site-header {
 }
 
 .brand-logo {
-  width: 44px;
-  height: 44px;
+  height: 40px;
+  width: auto;
+  max-width: 62px;
   object-fit: contain;
-  filter: none;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
 }
 
 .brand-text {
