@@ -395,10 +395,7 @@
   <!-- Modal Espace Adhérent -->
   <div class="modal-backdrop" id="account-modal-backdrop" aria-hidden="true">
     <div class="modal-dialog modal-dialog-account" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
-      <div class="modal-fixed-top-bar">
-        <div class="modal-top-bar-left">
-          <span class="modal-top-title">Espace Adhérent</span>
-        </div>
+      <div class="modal-fixed-top-bar modal-top-bar-clean">
         <button type="button" class="icon-close-btn modal-top-close" id="close-account-modal-btn" aria-label="Fermer">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M18 6 6 18" />
@@ -413,48 +410,44 @@
       <div id="account-guest-view">
         <div class="account-modal-header">
           <div class="account-modal-logo-wrap">
-            <img src="dragon_follow_feu.gif" alt="DORAGON DOJO CLUB" class="account-modal-logo" width="160" height="102" />
+            <img src="dragon_follow_feu.gif" alt="DORAGON DOJO" class="account-modal-logo" width="130" height="83" />
           </div>
-          <h2 id="account-modal-title" class="modal-heading visually-hidden">DORAGON DOJO CLUB</h2>
+          <h2 id="account-modal-title" class="visually-hidden">Espace Adhérent</h2>
         </div>
 
         <div class="account-segmented" role="tablist">
           <button type="button" class="account-tab-btn is-active" id="tab-login-btn" data-auth-tab="login">Connexion</button>
-          <button type="button" class="account-tab-btn" id="tab-register-btn" data-auth-tab="register">Créer un compte</button>
+          <button type="button" class="account-tab-btn" id="tab-register-btn" data-auth-tab="register">Inscription</button>
         </div>
 
         <!-- Formulaire de Connexion -->
         <form class="account-form" id="member-login-form">
           <div class="form-field">
-            <label for="login-email">Email adhérent</label>
-            <input type="email" id="login-email" name="email" required autocomplete="email" placeholder="lucas@exemple.fr" />
+            <label for="login-email">Email</label>
+            <input type="email" id="login-email" name="email" required autocomplete="email" placeholder="nom@exemple.fr" />
           </div>
           <div class="form-field">
             <label for="login-password">Mot de passe</label>
             <input type="password" id="login-password" name="password" required autocomplete="current-password" placeholder="••••••••" />
           </div>
           <div class="account-alert account-alert-error" id="login-error-msg" hidden></div>
-          <button type="submit" class="btn btn-primary btn-full" id="btn-submit-login">
+          <button type="submit" class="btn btn-primary btn-full btn-auth-submit" id="btn-submit-login">
             <span>Se connecter</span>
           </button>
-          <div class="account-form-switch">
-            <span>Nouveau au club ?</span>
-            <button type="button" class="btn-text-link" id="switch-to-register">Créer mon compte adhérent</button>
-          </div>
         </form>
 
         <!-- Formulaire d'Inscription -->
         <form class="account-form" id="member-register-form" hidden>
           <div class="form-field">
-            <label for="reg-name">Nom et prénom *</label>
-            <input type="text" id="reg-name" name="name" required autocomplete="name" placeholder="Lucas Martin" />
+            <label for="reg-name">Nom complet</label>
+            <input type="text" id="reg-name" name="name" required autocomplete="name" placeholder="Prénom et nom" />
           </div>
           <div class="form-field">
-            <label for="reg-email">Email *</label>
-            <input type="email" id="reg-email" name="email" required autocomplete="email" placeholder="lucas@exemple.fr" />
+            <label for="reg-email">Email</label>
+            <input type="email" id="reg-email" name="email" required autocomplete="email" placeholder="nom@exemple.fr" />
           </div>
           <div class="form-field">
-            <label for="reg-phone">Téléphone portable *</label>
+            <label for="reg-phone">Téléphone</label>
             <input type="tel" id="reg-phone" name="phone" required autocomplete="tel" placeholder="06 12 34 56 78" />
           </div>
           <div class="form-row-2">
@@ -480,17 +473,13 @@
             </div>
           </div>
           <div class="form-field">
-            <label for="reg-password">Mot de passe (6 caractères min.) *</label>
-            <input type="password" id="reg-password" name="password" required minlength="6" autocomplete="new-password" placeholder="••••••••" />
+            <label for="reg-password">Mot de passe</label>
+            <input type="password" id="reg-password" name="password" required minlength="6" autocomplete="new-password" placeholder="6 caractères min." />
           </div>
           <div class="account-alert account-alert-error" id="register-error-msg" hidden></div>
-          <button type="submit" class="btn btn-primary btn-full" id="btn-submit-register">
+          <button type="submit" class="btn btn-primary btn-full btn-auth-submit" id="btn-submit-register">
             <span>Créer mon compte</span>
           </button>
-          <div class="account-form-switch">
-            <span>Déjà inscrit ?</span>
-            <button type="button" class="btn-text-link" id="switch-to-login">Se connecter</button>
-          </div>
         </form>
       </div>
 
