@@ -409,7 +409,7 @@ body.modal-open .site-header {
   font-weight: 600;
   border-radius: 5px;
   background: #ffffff;
-  color: #191919;
+  color: #080d1a;
   border: 1px solid rgba(255, 255, 255, 0.9);
   box-shadow: none;
   cursor: pointer;
@@ -421,7 +421,7 @@ body.modal-open .site-header {
 
 .btn-enter:hover {
   background: #ffffff;
-  color: #191919;
+  color: #080d1a;
   transform: none;
   box-shadow: none;
 }
@@ -734,7 +734,7 @@ body.modal-open .site-header {
 
 .guide-card-header {
   padding: 0.95rem 1.15rem;
-  background: #282828;
+  background: var(--bg-muted);
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -782,7 +782,7 @@ body.modal-open .site-header {
 
 /* Footer */
 .site-footer {
-  background: #111111;
+  background: var(--bg-page);
   color: var(--ink-secondary);
   border-top: 1px solid var(--border-subtle);
   padding: 1.5rem 0;
@@ -835,7 +835,7 @@ body.modal-open .site-header {
 .drawer-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(34, 34, 34, 0.75);
+  background: rgba(8, 13, 26, 0.85);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   z-index: 9990;
@@ -850,7 +850,7 @@ body.modal-open .site-header {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(34, 34, 34, 0.82);
+  background: rgba(8, 13, 26, 0.88);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   z-index: 10000;
@@ -1004,7 +1004,7 @@ body.modal-open .site-header {
   padding: 0.75rem;
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  background: #242424;
+  background: var(--bg-muted);
 }
 
 .cart-item-img {
@@ -1088,7 +1088,7 @@ body.modal-open .site-header {
 }
 
 .cart-summary-box {
-  background: #242424;
+  background: var(--bg-muted);
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
   padding: 0.9rem 1.05rem;
@@ -1170,7 +1170,7 @@ body.modal-open .site-header {
   width: min(640px, 100%);
   max-height: 90dvh;
   overflow-y: auto;
-  background: #1e1e1e;
+  background: var(--bg-surface);
   color: #ffffff;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -1260,7 +1260,7 @@ body.modal-open .site-header {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: rgba(34, 34, 34, 0.85);
+  background: rgba(8, 13, 26, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #ffffff;
   display: flex;
@@ -1275,7 +1275,7 @@ body.modal-open .site-header {
 .gallery-arrow:hover,
 .gallery-arrow:active {
   background: var(--club-gold);
-  color: #1b1b1b;
+  color: #080d1a;
   border-color: var(--club-gold);
 }
 
@@ -1295,7 +1295,7 @@ body.modal-open .site-header {
   font-weight: 600;
   padding: 0.25rem 0.65rem;
   border-radius: 5px;
-  background: rgba(34, 34, 34, 0.82);
+  background: rgba(8, 13, 26, 0.88);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.15);
   z-index: 5;
@@ -1328,7 +1328,7 @@ body.modal-open .site-header {
 
 .gallery-pill-btn.is-active {
   background: var(--club-gold);
-  color: #1b1b1b;
+  color: #080d1a;
   border-color: var(--club-gold);
   font-weight: 600;
 }
@@ -1408,7 +1408,7 @@ body.modal-open .site-header {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  background: #262626;
+  background: var(--bg-surface); border: 1px solid var(--club-gold);
   
   border: 1px solid rgba(255, 255, 255, 0.22);
   color: #ffffff;
@@ -1445,7 +1445,7 @@ body.modal-open .site-header {
   border-radius: 6px;
   object-fit: contain;
   background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(34, 34, 34, 0.08);
+  border: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
 
@@ -1718,7 +1718,7 @@ body.modal-open .site-header {
   gap: 0.9rem;
   padding: 1rem 1.15rem;
   border-bottom: 1px solid var(--border-subtle);
-  background: #282828;
+  background: var(--bg-muted);
 }
 
 .stock-card-img {
@@ -1895,8 +1895,8 @@ select option {
 }
 
 .stock-status-pill.is-low {
-  background: rgba(191, 177, 155, 0.2);
-  color: #c9b99e;
+  background: rgba(212, 175, 55, 0.18);
+  color: var(--club-gold);
 }
 
 .stock-status-pill.is-out {
@@ -2125,7 +2125,7 @@ select option {
 
 .account-trigger:hover {
   background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(191, 177, 155, 0.45);
+  border-color: var(--club-gold);
   transform: none;
 }
 
@@ -2134,13 +2134,13 @@ select option {
 }
 
 .account-trigger.is-logged {
-  background: rgba(191, 177, 155, 0.06);
-  border-color: rgba(191, 177, 155, 0.4);
+  background: rgba(212, 175, 55, 0.08);
+  border-color: rgba(212, 175, 55, 0.35);
   color: #ffffff;
 }
 
 .account-trigger.is-logged:hover {
-  background: rgba(191, 177, 155, 0.24);
+  background: rgba(212, 175, 55, 0.22);
   border-color: var(--club-gold);
 }
 
@@ -2464,7 +2464,7 @@ select option {
   display: flex;
   align-items: center;
   gap: 1rem;
-  background: rgba(23, 23, 23, 0.7);
+  background: var(--bg-muted);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
   padding: 1rem 1.25rem;
@@ -2528,7 +2528,7 @@ select option {
 }
 
 .member-order-card {
-  background: rgba(23, 23, 23, 0.6);
+  background: var(--bg-muted);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
   padding: 1rem;
@@ -2539,7 +2539,7 @@ select option {
 }
 
 .member-order-card:hover {
-  border-color: rgba(191, 177, 155, 0.35);
+  border-color: var(--club-gold);
 }
 
 .member-order-header {
@@ -2622,8 +2622,8 @@ select option {
 }
 
 .account-central-receipts-notice {
-  background: rgba(191, 177, 155, 0.1);
-  border: 1px solid rgba(191, 177, 155, 0.3);
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
   padding: 0.95rem 1.1rem;
   display: flex;
@@ -2792,8 +2792,8 @@ select option {
 }
 
 .payment-option-card:hover {
-  border-color: rgba(191, 177, 155, 0.45);
-  background: rgba(32, 32, 32, 0.9);
+  border-color: var(--club-gold);
+  background: var(--bg-surface);
 }
 
 .payment-option-card.is-active {
@@ -2844,20 +2844,20 @@ select option {
 }
 
 .pill-gold {
-  background: rgba(191, 177, 155, 0.18);
+  background: rgba(212, 175, 55, 0.18);
   color: var(--club-gold);
-  border: 1px solid rgba(191, 177, 155, 0.35);
+  border: 1px solid var(--border-strong);
 }
 
 .pill-amber {
-  background: rgba(186, 168, 140, 0.18);
-  color: #c9b99e;
-  border: 1px solid rgba(186, 168, 140, 0.4);
+  background: rgba(212, 175, 55, 0.18);
+  color: var(--club-gold);
+  border: 1px solid var(--border-strong);
 }
 
 /* Panneau Carte Bancaire en ligne */
 .payment-subpanel {
-  background: rgba(23, 23, 23, 0.75);
+  background: var(--bg-surface);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
   padding: 1rem;
@@ -2888,8 +2888,8 @@ select option {
 
 .stripe-element-container {
   min-height: 160px;
-  background: rgba(23, 23, 23, 0.6);
-  border: 1px solid rgba(191, 177, 155, 0.2);
+  background: var(--bg-muted);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
   padding: 0.85rem;
   transition: border-color 0.2s ease;
@@ -2897,7 +2897,7 @@ select option {
 }
 
 .stripe-element-container:focus-within {
-  border-color: rgba(191, 177, 155, 0.5);
+  border-color: var(--club-gold);
 }
 
 .stripe-loading-skeleton {
@@ -2906,7 +2906,7 @@ select option {
   justify-content: center;
   gap: 0.75rem;
   min-height: 140px;
-  color: #aaa59d;
+  color: var(--ink-secondary);
   font-size: 0.85rem;
 }
 
@@ -2997,9 +2997,9 @@ select option {
 }
 
 .checkout-total-pill {
-  background: rgba(191, 177, 155, 0.15);
+  background: rgba(212, 175, 55, 0.15);
   color: var(--club-gold);
-  border: 1px solid rgba(191, 177, 155, 0.35);
+  border: 1px solid var(--border-strong);
   border-radius: 5px;
   padding: 0.25rem 0.75rem;
   font-size: 0.88rem;
@@ -3092,8 +3092,8 @@ select option {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--club-gold);
-  background: rgba(191, 177, 155, 0.12);
-  border: 1px solid rgba(191, 177, 155, 0.35);
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid var(--border-strong);
   padding: 0.3rem 0.95rem;
   border-radius: 5px;
   letter-spacing: 0.05em;
@@ -3215,8 +3215,8 @@ select option {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  background: rgba(182, 165, 139, 0.12);
-  border: 1px solid rgba(198, 183, 159, 0.28);
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   margin-bottom: 1rem;
 }
@@ -3259,8 +3259,8 @@ select option {
 }
 
 .auth-required-card {
-  background: rgba(23, 23, 23, 0.7);
-  border: 1px solid rgba(191, 177, 155, 0.3);
+  background: var(--bg-muted);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
   padding: 1.25rem 1rem;
   text-align: center;
@@ -3297,8 +3297,8 @@ select option {
 
 .reservation-simple-notice {
   padding: 0.85rem 1rem;
-  background: rgba(191, 177, 155, 0.08);
-  border: 1px solid rgba(191, 177, 155, 0.22);
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
   font-size: 0.85rem;
   color: var(--ink-secondary);
@@ -3358,7 +3358,9 @@ body {
     position: sticky;
     top: 0;
     z-index: 50;
-    background: rgba(23, 23, 23, 0.94);
+    background: rgba(8, 13, 26, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
@@ -3393,7 +3395,13 @@ body {
   }
 
   .brand-tag {
-    display: none !important;
+    display: block !important;
+    font-size: 0.62rem;
+    color: var(--club-gold);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1;
   }
 
   .header-actions {
@@ -3451,6 +3459,9 @@ body {
     width: 100%;
     padding: 0.25rem;
     gap: 0.35rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
   }
 
   .segmented-btn {
@@ -3460,6 +3471,15 @@ body {
     font-size: 0.82rem;
     min-height: 38px;
     white-space: nowrap;
+    border-radius: 6px;
+    color: var(--ink-secondary);
+  }
+
+  .segmented-btn.is-active {
+    background: var(--club-gold) !important;
+    color: #080d1a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3) !important;
   }
 
   /* Grille des Produits Mobile */
@@ -3470,10 +3490,10 @@ body {
   }
 
   .product-card {
-    border-radius: 6px;
-    background: #1f1f1f;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: none;
+    border-radius: 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
   }
 
   .product-media {
@@ -3536,6 +3556,17 @@ body {
     align-items: center;
     justify-content: center;
     touch-action: manipulation;
+    border: 1px solid var(--border-subtle);
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .size-pill.is-selected {
+    background: var(--club-gold) !important;
+    border-color: var(--club-gold) !important;
+    color: #080d1a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 10px rgba(212, 175, 55, 0.3) !important;
   }
 
   /* Actions du Produit en Pile Verticale sur Mobile (ZÉRO chevauchement) */
@@ -3693,7 +3724,7 @@ body {
     padding: 0 !important;
     align-items: flex-end !important;
     backdrop-filter: blur(3px) !important;
-    background: rgba(34, 34, 34, 0.82) !important;
+    background: rgba(8, 13, 26, 0.88) !important;
   }
 
   .modal-dialog,
@@ -3706,8 +3737,8 @@ body {
     border-left: none !important;
     border-right: none !important;
     border-bottom: none !important;
-    border-top: 1px solid rgba(191, 177, 155, 0.3) !important;
-    background: #1f1f1f !important;
+    border-top: 1px solid rgba(212, 175, 55, 0.35) !important;
+    background: var(--bg-surface) !important;
     padding: 1.25rem 1rem calc(env(safe-area-inset-bottom, 20px) + 1.25rem) !important;
     box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28) !important;
     overflow-y: auto !important;
@@ -3724,7 +3755,7 @@ body {
     border-left: none !important;
     border-right: none !important;
     border-bottom: none !important;
-    border-top: 1px solid rgba(191, 177, 155, 0.3) !important;
+    border-top: 1px solid rgba(212, 175, 55, 0.35) !important;
     background: #090e1a !important;
     border-top: 1px solid rgba(212, 175, 55, 0.35) !important;
     padding: 0 !important;
@@ -3794,7 +3825,8 @@ body {
     gap: 0.35rem;
     padding: 0.25rem;
     margin-bottom: 1.15rem;
-    background: rgba(23, 23, 23, 0.9);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(212, 175, 55, 0.25);
   }
 
   .account-tab-btn {
@@ -3808,6 +3840,15 @@ body {
     gap: 0.35rem;
     text-align: center;
     border-radius: 6px;
+    color: var(--ink-secondary);
+    background: transparent;
+  }
+
+  .account-tab-btn.is-active {
+    background: var(--club-gold) !important;
+    color: #080d1a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3) !important;
   }
 
   .tab-label-extra {
@@ -3822,7 +3863,8 @@ body {
     padding: 0.85rem 0.95rem;
     margin-bottom: 1rem;
     border-radius: 6px;
-    background: rgba(23, 23, 23, 0.85);
+    background: var(--bg-muted);
+    border: 1px solid var(--border-subtle);
   }
 
   .account-avatar-large {
