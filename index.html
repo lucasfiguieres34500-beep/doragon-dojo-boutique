@@ -60,14 +60,10 @@
     <section class="landing-view" id="landing-view">
       <div class="container landing-inner">
         <div class="landing-logo-wrap">
-          <picture>
-            <source media="(max-width: 950px)" srcset="assets/logo-transparent.png" type="image/png" />
-            <img src="assets/logo-transparent.png" alt="Logo DORAGON DOJO CLUB" class="landing-logo" width="720" height="460" fetchpriority="high" />
-          </picture>
+          <img src="dragon_follow_feu.gif" alt="Logo DORAGON DOJO CLUB" class="landing-logo" width="720" height="460" fetchpriority="high" />
         </div>
 
-        <span class="landing-eyebrow">Boutique Officielle Adhérents</span>
-        <h1 id="landing-club-name">DORAGON DOJO CLUB</h1>
+        <h1 id="landing-club-name" class="visually-hidden">DORAGON DOJO CLUB</h1>
 
         <button type="button" class="btn btn-primary btn-enter" id="enter-shop-btn">
           <span>Entrer dans la boutique</span>
@@ -275,7 +271,7 @@
                 <!-- Panneau Paiement au Club -->
                 <div class="payment-subpanel" id="club-reservation-panel" hidden>
                   <div class="reservation-simple-notice">
-                    <span>🥋 Règlement de <strong class="text-gold" id="reservation-amount-text">0,00 €</strong> à la remise de votre tenue (Espèces ou CB).</span>
+                    <span>Règlement de <strong class="text-gold" id="reservation-amount-text">0,00 €</strong> à la remise de votre tenue (Espèces ou CB).</span>
                   </div>
                 </div>
               </div>
@@ -404,7 +400,6 @@
     <div class="modal-dialog modal-dialog-account" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
       <div class="modal-fixed-top-bar">
         <div class="modal-top-bar-left">
-          <span class="modal-top-badge">🥋 Dojo Club</span>
           <span class="modal-top-title">Espace Adhérent</span>
         </div>
         <button type="button" class="icon-close-btn modal-top-close" id="close-account-modal-btn" aria-label="Fermer">
@@ -420,9 +415,10 @@
       <!-- Vue Invité (Déconnecté) -->
       <div id="account-guest-view">
         <div class="account-modal-header">
-          <div class="account-header-badge">Espace Adhérent</div>
-          <h2 id="account-modal-title" class="modal-heading">DORAGON DOJO CLUB</h2>
-          <p class="modal-subheading">Connectez-vous pour pré-remplir vos commandes et retrouver l'historique de vos achats.</p>
+          <div class="account-modal-logo-wrap">
+            <img src="dragon_follow_feu.gif" alt="DORAGON DOJO CLUB" class="account-modal-logo" width="160" height="102" />
+          </div>
+          <h2 id="account-modal-title" class="modal-heading visually-hidden">DORAGON DOJO CLUB</h2>
         </div>
 
         <div class="account-segmented" role="tablist">
@@ -522,11 +518,9 @@
 
         <div class="account-segmented" role="tablist">
           <button type="button" class="account-tab-btn is-active" id="tab-member-orders-btn" data-logged-tab="orders">
-            <span class="tab-label-icon">📄</span>
             <span class="tab-label-text">Mes Commandes<span class="tab-label-extra"> & Reçus</span></span>
           </button>
           <button type="button" class="account-tab-btn" id="tab-member-profile-btn" data-logged-tab="profile">
-            <span class="tab-label-icon">⚙️</span>
             <span class="tab-label-text">Préférences</span>
           </button>
         </div>
