@@ -563,6 +563,7 @@
         return `
         <article class="product-card" data-product-id="${product.id}" style="--card-index:${index};">
           <div class="product-media" data-action="open-details" data-product-id="${product.id}">
+            ${product.badge ? `<span class="product-badge">${escapeHtml(product.badge)}</span>` : ''}
             <img src="${product.image}" alt="${escapeHtml(product.name)}" loading="lazy" decoding="async" />
           </div>
           <div class="product-body">
@@ -1088,6 +1089,7 @@
           }
         </div>
         <div class="product-modal-info">
+          ${product.badge ? `<span class="product-modal-badge">${escapeHtml(product.badge)}</span>` : ''}
           <h2 id="modal-product-title" class="product-modal-heading">${escapeHtml(product.name)}</h2>
           <div class="product-modal-price">${formatEuro(product.price)}</div>
 

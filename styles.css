@@ -552,6 +552,41 @@ body.modal-open .site-header {
   transform: none;
 }
 
+.product-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(18, 18, 18, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #f5ede0;
+  border: 1px solid rgba(191, 177, 155, 0.45);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.22rem 0.6rem;
+  border-radius: 4px;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
+
+.product-modal-badge {
+  display: inline-block;
+  align-self: flex-start;
+  background: rgba(191, 177, 155, 0.12);
+  color: var(--club-gold);
+  border: 1px solid rgba(191, 177, 155, 0.35);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.65rem;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
 .product-body {
   padding: 1.3rem;
   display: flex;

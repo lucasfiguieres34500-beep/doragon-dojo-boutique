@@ -536,7 +536,7 @@ async function getProducts() {
             ],
             description: '',
             shortDesc: '',
-            badge: '',
+            badge: row.badge || defaultProd.badge || '',
             sizeLabel: 'Taille',
             sizes,
             defaultSize: defaultProd.defaultSize || sizes[0],
