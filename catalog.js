@@ -15,9 +15,9 @@
       categoryLabel: 'Rashguard',
       name: 'Rashguard Édition Luta Livre',
       price: 25,
-      image: 'assets/rashguard-mc-front-white.jpg',
+      image: 'assets/rashguard-mc-front-v2.jpg',
       images: [
-        { src: 'assets/rashguard-mc-front-white.jpg', label: 'Face' },
+        { src: 'assets/rashguard-mc-front-v2.jpg', label: 'Face' },
         { src: 'assets/rashguard-mc-back-white.jpg', label: 'Dos' },
         { src: 'assets/rashguard-mc-side-white.jpg', label: 'Profil' },
         { src: 'assets/rashguard-mc-detail-white.jpg', label: 'Détail' }
