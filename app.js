@@ -1487,6 +1487,19 @@
       if (els.profGlovesSize)
         els.profGlovesSize.value = state.member.favoriteGlovesSize || '';
 
+      // Mise à jour des KPIs du profil
+      const ordersCountEl = document.getElementById('kpi-orders-count');
+      if (ordersCountEl) {
+        const count = Array.isArray(state.memberOrders) ? state.memberOrders.length : 0;
+        ordersCountEl.textContent = count === 0 ? '0 commande' : `${count} commande${count > 1 ? 's' : ''}`;
+      }
+      const sizesLabelEl = document.getElementById('kpi-sizes-label');
+      if (sizesLabelEl) {
+        const rg = state.member.favoriteRashguardSize || 'M';
+        const gl = state.member.favoriteGlovesSize || 'S / M';
+        sizesLabelEl.textContent = `${rg} • ${gl}`;
+      }
+
       // Synchronisation avec les champs de commande
       const nameInput = document.getElementById('member-name');
       const phoneInput = document.getElementById('member-phone');
@@ -1553,13 +1566,24 @@
 
   function renderMemberOrders() {
     if (!els.memberOrdersContainer) return;
+
+    const ordersCountEl = document.getElementById('kpi-orders-count');
+    if (ordersCountEl) {
+      const count = Array.isArray(state.memberOrders) ? state.memberOrders.length : 0;
+      ordersCountEl.textContent = count === 0 ? '0 commande' : `${count} commande${count > 1 ? 's' : ''}`;
+    }
+
     if (!state.memberOrders || state.memberOrders.length === 0) {
       els.memberOrdersContainer.innerHTML = `
         <div class="member-order-empty">
-          <div style="font-size:2rem;margin-bottom:0.5rem;">🥋</div>
-          <p><strong>Aucune commande enregistrée</strong></p>
-          <p style="font-size:0.85rem;color:rgba(255,255,255,0.7);margin-bottom:1rem;">Dès que vous passez commande, votre reçu officiel PDF avec numéro légal sera centralisé ici.</p>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-browse-from-account">Découvrir les équipements</button>
+          <div class="empty-icon-wrap">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+          </div>
+          <h3 class="empty-title">Aucune commande pour le moment</h3>
+          <p class="empty-sub">Vos commandes d'équipements ainsi que vos reçus officiels PDF certifiés seront automatiquement centralisés et conservés ici.</p>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-browse-from-account">Explorer la boutique</button>
         </div>
       `;
       const browseBtn = document.getElementById('btn-browse-from-account');
@@ -1577,7 +1601,7 @@
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         <div>
           <strong>Reçus Officiels Centralisés</strong>
-          <p>Tous vos reçus PDF avec numéro de commande légal sont sauvegardés ici à vie. Vous pouvez les télécharger ou les présenter sur smartphone lors du retrait.</p>
+          <p>Tous vos reçus PDF avec numéro légal sont sauvegardés ici à vie. Vous pouvez les télécharger ou les présenter sur smartphone lors du retrait.</p>
         </div>
       </div>
     `;
@@ -1586,8 +1610,8 @@
       .map((order) => {
         const isOnline = (order.paymentMethod || '').toLowerCase().includes('en ligne');
         const statusLabel = isOnline
-          ? '✓ Payé CB (En ligne)'
-          : '⚠️ Réservation (À régler au dojo)';
+          ? 'Payé en ligne'
+          : 'Réservation Dojo';
         const statusClass = isOnline ? 'is-paid' : 'is-reserved';
 
         return `
@@ -1788,34 +1812,56 @@
   }
 
   function switchGuestTab(tab) {
-    els.accountModalBackdrop.querySelector('.account-scroll-body').scrollTop = 0;
+    const scrollBody = els.accountModalBackdrop?.querySelector('.account-scroll-body');
+    if (scrollBody) scrollBody.scrollTop = 0;
+    const forgotPanel = document.getElementById('account-forgot-panel');
+    const guestTabs = document.getElementById('guest-segmented-tabs');
+    if (forgotPanel) forgotPanel.hidden = true;
+    if (guestTabs) guestTabs.hidden = false;
+
     if (tab === 'register') {
-      els.tabLoginBtn.classList.remove('is-active');
-      els.tabRegisterBtn.classList.add('is-active');
-      els.memberLoginForm.hidden = true;
-      els.memberRegisterForm.hidden = false;
+      if (els.tabLoginBtn) els.tabLoginBtn.classList.remove('is-active');
+      if (els.tabRegisterBtn) els.tabRegisterBtn.classList.add('is-active');
+      if (els.memberLoginForm) els.memberLoginForm.hidden = true;
+      if (els.memberRegisterForm) els.memberRegisterForm.hidden = false;
     } else {
-      els.tabLoginBtn.classList.add('is-active');
-      els.tabRegisterBtn.classList.remove('is-active');
-      els.memberLoginForm.hidden = false;
-      els.memberRegisterForm.hidden = true;
+      if (els.tabLoginBtn) els.tabLoginBtn.classList.add('is-active');
+      if (els.tabRegisterBtn) els.tabRegisterBtn.classList.remove('is-active');
+      if (els.memberLoginForm) els.memberLoginForm.hidden = false;
+      if (els.memberRegisterForm) els.memberRegisterForm.hidden = true;
     }
     if (els.loginErrorMsg) els.loginErrorMsg.hidden = true;
     if (els.registerErrorMsg) els.registerErrorMsg.hidden = true;
   }
 
   function switchLoggedTab(tab) {
-    els.accountModalBackdrop.querySelector('.account-scroll-body').scrollTop = 0;
+    const scrollBody = els.accountModalBackdrop?.querySelector('.account-scroll-body');
+    if (scrollBody) scrollBody.scrollTop = 0;
+
+    const tabOrders = els.tabMemberOrdersBtn;
+    const tabProfile = els.tabMemberProfileBtn;
+    const tabDojo = document.getElementById('tab-member-dojo-btn');
+    const panelOrders = els.loggedPanelOrders;
+    const panelProfile = els.loggedPanelProfile;
+    const panelDojo = document.getElementById('logged-panel-dojo');
+
+    if (tabOrders) tabOrders.classList.remove('is-active');
+    if (tabProfile) tabProfile.classList.remove('is-active');
+    if (tabDojo) tabDojo.classList.remove('is-active');
+
+    if (panelOrders) panelOrders.hidden = true;
+    if (panelProfile) panelProfile.hidden = true;
+    if (panelDojo) panelDojo.hidden = true;
+
     if (tab === 'profile') {
-      els.tabMemberOrdersBtn.classList.remove('is-active');
-      els.tabMemberProfileBtn.classList.add('is-active');
-      els.loggedPanelOrders.hidden = true;
-      els.loggedPanelProfile.hidden = false;
+      if (tabProfile) tabProfile.classList.add('is-active');
+      if (panelProfile) panelProfile.hidden = false;
+    } else if (tab === 'dojo') {
+      if (tabDojo) tabDojo.classList.add('is-active');
+      if (panelDojo) panelDojo.hidden = false;
     } else {
-      els.tabMemberOrdersBtn.classList.add('is-active');
-      els.tabMemberProfileBtn.classList.remove('is-active');
-      els.loggedPanelOrders.hidden = false;
-      els.loggedPanelProfile.hidden = true;
+      if (tabOrders) tabOrders.classList.add('is-active');
+      if (panelOrders) panelOrders.hidden = false;
       renderMemberOrders();
     }
     if (els.profileSuccessMsg) els.profileSuccessMsg.hidden = true;
@@ -2044,6 +2090,116 @@
       els.tabMemberOrdersBtn.addEventListener('click', () => switchLoggedTab('orders'));
     if (els.tabMemberProfileBtn)
       els.tabMemberProfileBtn.addEventListener('click', () => switchLoggedTab('profile'));
+
+    const tabMemberDojoBtn = document.getElementById('tab-member-dojo-btn');
+    if (tabMemberDojoBtn)
+      tabMemberDojoBtn.addEventListener('click', () => switchLoggedTab('dojo'));
+
+    const btnShowForgot = document.getElementById('btn-show-forgot-pw');
+    const btnBackForgot = document.getElementById('btn-back-from-forgot');
+    const forgotPanel = document.getElementById('account-forgot-panel');
+    const guestTabs = document.getElementById('guest-segmented-tabs');
+
+    if (btnShowForgot && forgotPanel) {
+      btnShowForgot.addEventListener('click', () => {
+        if (els.memberLoginForm) els.memberLoginForm.hidden = true;
+        if (els.memberRegisterForm) els.memberRegisterForm.hidden = true;
+        if (guestTabs) guestTabs.hidden = true;
+        forgotPanel.hidden = false;
+        const err = document.getElementById('forgot-error-msg');
+        const ok = document.getElementById('forgot-success-msg');
+        if (err) err.hidden = true;
+        if (ok) ok.hidden = true;
+      });
+    }
+
+    if (btnBackForgot && forgotPanel) {
+      btnBackForgot.addEventListener('click', () => {
+        forgotPanel.hidden = true;
+        if (guestTabs) guestTabs.hidden = false;
+        switchGuestTab('login');
+      });
+    }
+
+    const forgotForm = document.getElementById('forgot-password-form');
+    if (forgotForm) {
+      forgotForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const emailInput = document.getElementById('forgot-email');
+        const email = (emailInput?.value || '').trim();
+        const submitBtn = document.getElementById('btn-submit-forgot');
+        const successMsg = document.getElementById('forgot-success-msg');
+        const errorMsg = document.getElementById('forgot-error-msg');
+        if (!email) return;
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Envoi du lien...';
+        }
+        if (successMsg) successMsg.hidden = true;
+        if (errorMsg) errorMsg.hidden = true;
+
+        try {
+          const res = await fetch('/api/member/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Envoyer le lien de récupération';
+          }
+          if (res.ok && data.ok) {
+            if (successMsg) {
+              successMsg.textContent =
+                data.message ||
+                'Si un compte existe avec cet email, un lien sécurisé a été envoyé.';
+              successMsg.hidden = false;
+            }
+          } else {
+            if (errorMsg) {
+              errorMsg.textContent = data.error || 'Erreur lors de la demande.';
+              errorMsg.hidden = false;
+            }
+          }
+        } catch {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Envoyer le lien de récupération';
+          }
+          if (errorMsg) {
+            errorMsg.textContent = 'Erreur réseau, veuillez réessayer.';
+            errorMsg.hidden = false;
+          }
+        }
+      });
+    }
+
+    const btnSwitchReg = document.getElementById('btn-switch-to-register');
+    if (btnSwitchReg)
+      btnSwitchReg.addEventListener('click', () => switchGuestTab('register'));
+
+    const btnSwitchLog = document.getElementById('btn-switch-to-login');
+    if (btnSwitchLog)
+      btnSwitchLog.addEventListener('click', () => switchGuestTab('login'));
+
+    // Toggles mot de passe visible/masqué
+    document.querySelectorAll('.toggle-password-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.dataset.targetInput;
+        const input = document.getElementById(targetId);
+        if (!input) return;
+        const isPw = input.type === 'password';
+        input.type = isPw ? 'text' : 'password';
+        btn.setAttribute(
+          'aria-label',
+          isPw ? 'Masquer le mot de passe' : 'Afficher le mot de passe',
+        );
+        btn.classList.toggle('is-visible', isPw);
+      });
+    });
+
     if (els.memberLoginForm)
       els.memberLoginForm.addEventListener('submit', handleMemberLogin);
     if (els.memberRegisterForm)

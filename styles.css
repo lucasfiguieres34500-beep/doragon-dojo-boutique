@@ -2190,16 +2190,16 @@ select option {
 
 /* Modal Compte */
 .modal-dialog-account {
-  max-width: 440px;
-  width: 92%;
-  max-height: 90vh;
+  max-width: 580px;
+  width: 94%;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #090e1a;
-  border: 1px solid rgba(212, 175, 55, 0.3);
+  background: #080d1a;
+  border: 1px solid rgba(212, 175, 55, 0.35);
   border-radius: 16px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75), 0 0 35px rgba(212, 175, 55, 0.12);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75), 0 0 35px rgba(212, 175, 55, 0.15);
   padding: 0;
   color: #ffffff;
   position: relative;
@@ -2288,11 +2288,11 @@ select option {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 0.1rem auto 0.75rem;
+  margin: 0.1rem auto 0.6rem;
 }
 
 .account-modal-logo {
-  max-width: 135px;
+  max-width: 125px;
   width: 100%;
   height: auto;
   object-fit: contain;
@@ -2302,16 +2302,32 @@ select option {
 
 .account-header-badge {
   display: inline-block;
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   color: var(--club-gold);
   background: rgba(212, 175, 55, 0.12);
   border: 1px solid rgba(212, 175, 55, 0.35);
   border-radius: 5px;
   padding: 0.25rem 0.75rem;
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.45rem;
+}
+
+.account-guest-heading {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.25rem;
+  letter-spacing: -0.01em;
+}
+
+.account-guest-subtext {
+  font-size: 0.85rem;
+  color: var(--ink-secondary);
+  line-height: 1.45;
+  margin: 0 auto 1.15rem;
+  max-width: 420px;
 }
 
 .modal-subheading {
@@ -2324,12 +2340,16 @@ select option {
 .account-segmented {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
+  gap: 5px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(212, 175, 55, 0.25);
   border-radius: 10px;
   padding: 4px;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.35rem;
+}
+
+.account-segmented-3 {
+  grid-template-columns: repeat(3, 1fr) !important;
 }
 
 .account-tab-btn {
@@ -2337,12 +2357,13 @@ select option {
   border: none;
   color: var(--ink-secondary);
   font-weight: 600;
-  font-size: 0.9rem;
-  padding: 0.65rem 0.85rem;
+  font-size: 0.88rem;
+  padding: 0.65rem 0.65rem;
   border-radius: 7px;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: center;
+  white-space: nowrap;
 }
 
 .account-tab-btn:hover {
@@ -2351,7 +2372,7 @@ select option {
 
 .account-tab-btn.is-active {
   background: var(--club-gold);
-  color: #080d1a;
+  color: #080d1a !important;
   font-weight: 700;
   border: none;
   box-shadow: 0 2px 10px rgba(212, 175, 55, 0.35);
@@ -2360,7 +2381,144 @@ select option {
 .account-form {
   display: flex;
   flex-direction: column;
-  gap: 1.15rem;
+  gap: 1.05rem;
+}
+
+.form-section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--club-gold);
+  margin-top: 0.4rem;
+  margin-bottom: 0.15rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.16);
+}
+
+.field-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.field-action-link {
+  font-size: 0.78rem;
+  color: var(--club-gold);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.field-action-link:hover {
+  color: #ffffff;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input-with-icon .field-icon {
+  position: absolute;
+  left: 0.95rem;
+  color: var(--ink-muted);
+  pointer-events: none;
+  transition: color 0.2s ease;
+}
+
+.input-with-icon input {
+  padding-left: 2.75rem !important;
+  padding-right: 2.75rem !important;
+}
+
+.input-with-icon input:focus ~ .field-icon {
+  color: var(--club-gold);
+}
+
+.toggle-password-btn {
+  position: absolute;
+  right: 0.65rem;
+  background: transparent;
+  border: none;
+  color: var(--ink-muted);
+  padding: 0.4rem;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.toggle-password-btn:hover {
+  color: #ffffff;
+}
+
+.toggle-password-btn.is-visible {
+  color: var(--club-gold);
+}
+
+.field-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  margin-top: 0.35rem;
+  line-height: 1.35;
+}
+
+.account-footer-hint {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.84rem;
+  color: var(--ink-secondary);
+  margin-top: 0.65rem;
+}
+
+.account-footer-hint .highlight {
+  color: var(--club-gold);
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.account-footer-hint .highlight:hover {
+  color: #ffffff;
+}
+
+.account-forgot-panel {
+  padding: 0.25rem 0;
+  animation: fadeIn 0.22s ease;
+}
+
+.forgot-panel-head {
+  margin-bottom: 1.25rem;
+}
+
+.forgot-panel-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0.85rem 0 0.35rem;
+}
+
+.forgot-panel-text {
+  font-size: 0.85rem;
+  color: var(--ink-secondary);
+  line-height: 1.45;
+  margin: 0;
 }
 
 .account-form .form-field label {
@@ -2459,31 +2617,32 @@ select option {
   color: #34d399;
 }
 
-/* Profil connecté */
+/* Profil VIP Connecté */
 .account-profile-header {
   display: flex;
   align-items: center;
   gap: 1rem;
   background: var(--bg-muted);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
-  padding: 1rem 1.25rem;
-  margin-bottom: 1.25rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 1.15rem 1.25rem;
+  margin-bottom: 1rem;
 }
 
 .account-avatar-large {
-  width: 52px;
-  height: 52px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
   background: var(--club-gold);
   color: #080d1a;
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   border: 2px solid var(--club-gold-soft);
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.25);
 }
 
 .account-profile-info {
@@ -2491,19 +2650,31 @@ select option {
   min-width: 0;
 }
 
-.account-profile-badge {
-  font-size: 0.68rem;
-  font-weight: 600;
+.account-profile-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--club-gold);
+  margin-bottom: 0.2rem;
+}
+
+.status-indicator-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 6px #34d399;
 }
 
 .account-profile-name {
-  font-size: 1.15rem;
-  font-weight: 600;
+  font-size: 1.2rem;
+  font-weight: 700;
   color: #ffffff;
-  margin: 0.15rem 0;
+  margin: 0.1rem 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2511,10 +2682,163 @@ select option {
 
 .account-profile-email {
   font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--ink-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.btn-account-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.82rem;
+  border-radius: 6px;
+  border-color: var(--border-subtle);
+  color: var(--ink-secondary);
+}
+
+.btn-account-logout:hover {
+  border-color: var(--club-red);
+  color: var(--club-red);
+  background: rgba(214, 40, 40, 0.1);
+}
+
+/* Grille KPIs */
+.account-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem;
+  margin-bottom: 1.25rem;
+}
+
+.account-kpi-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
+  text-align: center;
+}
+
+.account-kpi-card .kpi-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  margin-bottom: 0.25rem;
+}
+
+.account-kpi-card .kpi-value {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge-locked {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+
+/* Empty State Pro */
+.member-order-empty {
+  padding: 2.25rem 1.5rem;
+  text-align: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin-top: 0.5rem;
+}
+
+.empty-icon-wrap {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--club-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.95rem;
+}
+
+.empty-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.4rem;
+}
+
+.empty-sub {
+  font-size: 0.85rem;
+  color: var(--ink-secondary);
+  line-height: 1.5;
+  margin: 0 auto 1.25rem;
+  max-width: 380px;
+}
+
+/* Guide Retrait Dojo */
+.dojo-pickup-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.dojo-pickup-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.pickup-card-icon {
+  color: var(--club-gold);
+  flex-shrink: 0;
+  padding-top: 0.15rem;
+}
+
+.pickup-card-content h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.35rem;
+}
+
+.pickup-card-content p {
+  font-size: 0.86rem;
+  color: var(--ink-secondary);
+  margin: 0 0 0.35rem;
+  line-height: 1.45;
+}
+
+.pickup-card-content .pickup-sub {
+  font-size: 0.8rem;
+  color: var(--ink-muted) !important;
+}
+
+.pickup-hours-list,
+.pickup-steps-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.15rem;
+  font-size: 0.85rem;
+  color: var(--ink-secondary);
+  line-height: 1.6;
+}
+
+.pickup-hours-list strong,
+.pickup-steps-list strong {
+  color: #ffffff;
 }
 
 /* Historique commandes adhérent */
@@ -3801,8 +4125,8 @@ body {
   /* Espace Compte Mobile */
   .account-modal-header {
     margin-bottom: 1.15rem;
-    padding-right: 2.5rem; /* Ne pas chevaucher la croix de fermeture */
-    text-align: left;
+    padding-right: 0;
+    text-align: center;
   }
 
   .account-header-badge {
@@ -3831,13 +4155,13 @@ body {
 
   .account-tab-btn {
     flex: 1;
-    padding: 0.65rem 0.35rem;
-    font-size: 0.8rem;
+    padding: 0.65rem 0.25rem;
+    font-size: 0.78rem;
     min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.35rem;
+    gap: 0.25rem;
     text-align: center;
     border-radius: 6px;
     color: var(--ink-secondary);
@@ -3853,6 +4177,24 @@ body {
 
   .tab-label-extra {
     display: none;
+  }
+
+  .account-kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.45rem;
+    margin-bottom: 1rem;
+  }
+
+  .account-kpi-card {
+    padding: 0.55rem 0.35rem;
+  }
+
+  .account-kpi-card .kpi-label {
+    font-size: 0.6rem;
+  }
+
+  .account-kpi-card .kpi-value {
+    font-size: 0.76rem;
   }
 
   /* Profil Connecté Mobile */

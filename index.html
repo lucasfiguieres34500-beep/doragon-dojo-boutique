@@ -406,16 +406,21 @@
 
       <div class="account-scroll-body">
 
-      <!-- Vue Invité (Déconnecté) -->
+      <!-- ========================================== -->
+      <!-- VUE INVITÉ (DÉCONNECTÉ)                     -->
+      <!-- ========================================== -->
       <div id="account-guest-view">
         <div class="account-modal-header">
           <div class="account-modal-logo-wrap">
             <img src="dragon_follow_feu.gif" alt="DORAGON DOJO" class="account-modal-logo" width="130" height="83" />
           </div>
-          <h2 id="account-modal-title" class="visually-hidden">Espace Adhérent</h2>
+          <span class="account-header-badge">Espace Adhérent Officiel</span>
+          <h2 id="account-modal-title" class="account-guest-heading">Doragon Dojo Club</h2>
+          <p class="account-guest-subtext">Retrouvez vos commandes, vos reçus PDF certifiés et vos tailles de combat.</p>
         </div>
 
-        <div class="account-segmented" role="tablist">
+        <!-- Onglets Connexion / Inscription -->
+        <div class="account-segmented" role="tablist" id="guest-segmented-tabs">
           <button type="button" class="account-tab-btn is-active" id="tab-login-btn" data-auth-tab="login">Connexion</button>
           <button type="button" class="account-tab-btn" id="tab-register-btn" data-auth-tab="register">Inscription</button>
         </div>
@@ -423,33 +428,62 @@
         <!-- Formulaire de Connexion -->
         <form class="account-form" id="member-login-form">
           <div class="form-field">
-            <label for="login-email">Email</label>
-            <input type="email" id="login-email" name="email" required autocomplete="email" placeholder="nom@exemple.fr" />
+            <label for="login-email">Adresse Email</label>
+            <div class="input-with-icon">
+              <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+              <input type="email" id="login-email" name="email" required autocomplete="email" placeholder="nom@exemple.fr" />
+            </div>
           </div>
           <div class="form-field">
-            <label for="login-password">Mot de passe</label>
-            <input type="password" id="login-password" name="password" required autocomplete="current-password" placeholder="••••••••" />
+            <div class="field-label-row">
+              <label for="login-password">Mot de passe</label>
+              <button type="button" class="btn-text-link field-action-link" id="btn-show-forgot-pw">Mot de passe oublié ?</button>
+            </div>
+            <div class="input-with-icon">
+              <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <input type="password" id="login-password" name="password" required autocomplete="current-password" placeholder="••••••••" />
+              <button type="button" class="toggle-password-btn" data-target-input="login-password" aria-label="Afficher le mot de passe">
+                <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
           </div>
           <div class="account-alert account-alert-error" id="login-error-msg" hidden></div>
           <button type="submit" class="btn btn-primary btn-full btn-auth-submit" id="btn-submit-login">
             <span>Se connecter</span>
           </button>
+          <div class="account-footer-hint">
+            <span>Nouveau au club ?</span>
+            <button type="button" class="btn-text-link highlight" id="btn-switch-to-register">Créer mon compte adhérent</button>
+          </div>
         </form>
 
         <!-- Formulaire d'Inscription -->
         <form class="account-form" id="member-register-form" hidden>
+          <div class="form-section-title">Informations Personnelles</div>
           <div class="form-field">
             <label for="reg-name">Nom complet</label>
-            <input type="text" id="reg-name" name="name" required autocomplete="name" placeholder="Prénom et nom" />
+            <div class="input-with-icon">
+              <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <input type="text" id="reg-name" name="name" required autocomplete="name" placeholder="Prénom et nom" />
+            </div>
           </div>
           <div class="form-field">
             <label for="reg-email">Email</label>
-            <input type="email" id="reg-email" name="email" required autocomplete="email" placeholder="nom@exemple.fr" />
+            <div class="input-with-icon">
+              <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+              <input type="email" id="reg-email" name="email" required autocomplete="email" placeholder="nom@exemple.fr" />
+            </div>
           </div>
           <div class="form-field">
-            <label for="reg-phone">Téléphone</label>
-            <input type="tel" id="reg-phone" name="phone" required autocomplete="tel" placeholder="06 12 34 56 78" />
+            <label for="reg-phone">Téléphone portable</label>
+            <div class="input-with-icon">
+              <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              <input type="tel" id="reg-phone" name="phone" required autocomplete="tel" placeholder="06 12 34 56 78" />
+            </div>
+            <span class="field-hint">Utilisé pour vous avertir lors de la mise à disposition de votre commande au dojo.</span>
           </div>
+
+          <div class="form-section-title">Vos Tailles de Combat (Pré-remplissage)</div>
           <div class="form-row-2">
             <div class="form-field">
               <label for="reg-rashguard-size">Taille Rashguard</label>
@@ -472,70 +506,146 @@
               </select>
             </div>
           </div>
+
+          <div class="form-section-title">Sécurité</div>
           <div class="form-field">
             <label for="reg-password">Mot de passe</label>
-            <input type="password" id="reg-password" name="password" required minlength="6" autocomplete="new-password" placeholder="6 caractères min." />
+            <div class="input-with-icon">
+              <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <input type="password" id="reg-password" name="password" required minlength="6" autocomplete="new-password" placeholder="6 caractères minimum" />
+              <button type="button" class="toggle-password-btn" data-target-input="reg-password" aria-label="Afficher le mot de passe">
+                <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
           </div>
           <div class="account-alert account-alert-error" id="register-error-msg" hidden></div>
           <button type="submit" class="btn btn-primary btn-full btn-auth-submit" id="btn-submit-register">
-            <span>Créer mon compte</span>
+            <span>Créer mon compte adhérent</span>
           </button>
+          <div class="account-footer-hint">
+            <span>Déjà adhérent ?</span>
+            <button type="button" class="btn-text-link highlight" id="btn-switch-to-login">Se connecter</button>
+          </div>
         </form>
+
+        <!-- Volet Mot de passe oublié (intégré et fluide) -->
+        <div class="account-forgot-panel" id="account-forgot-panel" hidden>
+          <div class="forgot-panel-head">
+            <button type="button" class="btn-back-link" id="btn-back-from-forgot">← Retour à la connexion</button>
+            <h3 class="forgot-panel-title">Réinitialisation du mot de passe</h3>
+            <p class="forgot-panel-text">Saisissez l'adresse email de votre compte pour recevoir un lien sécurisé valable 30 minutes.</p>
+          </div>
+          <form class="account-form" id="forgot-password-form">
+            <div class="form-field">
+              <label for="forgot-email">Adresse Email</label>
+              <div class="input-with-icon">
+                <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                <input type="email" id="forgot-email" name="email" required autocomplete="email" placeholder="nom@exemple.fr" />
+              </div>
+            </div>
+            <div class="account-alert account-alert-success" id="forgot-success-msg" hidden></div>
+            <div class="account-alert account-alert-error" id="forgot-error-msg" hidden></div>
+            <button type="submit" class="btn btn-primary btn-full btn-auth-submit" id="btn-submit-forgot">
+              <span>Envoyer le lien de récupération</span>
+            </button>
+          </form>
+        </div>
       </div>
 
-      <!-- Vue Connectée (Profil & Commandes) -->
+      <!-- ========================================== -->
+      <!-- VUE CONNECTÉE (PROFIL, COMMANDES & DOJO)   -->
+      <!-- ========================================== -->
       <div id="account-logged-view" hidden>
+        <!-- En-tête profil carte VIP -->
         <div class="account-profile-header">
           <div class="account-avatar-large" id="profile-avatar-initials">LM</div>
           <div class="account-profile-info">
-            <div class="account-profile-badge">Adhérent Doragon</div>
+            <div class="account-profile-status-badge">
+              <span class="status-indicator-dot"></span>
+              <span>Adhérent Officiel</span>
+            </div>
             <h2 class="account-profile-name" id="profile-display-name">Lucas Martin</h2>
             <div class="account-profile-email" id="profile-display-email">lucas@exemple.fr</div>
           </div>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-logout" title="Déconnexion">
+          <button type="button" class="btn btn-secondary btn-sm btn-account-logout" id="btn-logout" title="Déconnexion">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
               <polyline points="16 17 21 12 16 7" />
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
-            <span>Quitter</span>
+            <span>Déconnexion</span>
           </button>
         </div>
 
-        <div class="account-segmented" role="tablist">
+        <!-- 3 Tuiles KPI / Aperçu rapide -->
+        <div class="account-kpi-grid">
+          <div class="account-kpi-card">
+            <div class="kpi-label">Historique</div>
+            <div class="kpi-value" id="kpi-orders-count">0 commande</div>
+          </div>
+          <div class="account-kpi-card">
+            <div class="kpi-label">Tailles Enregistrées</div>
+            <div class="kpi-value" id="kpi-sizes-label">M • S/M</div>
+          </div>
+          <div class="account-kpi-card">
+            <div class="kpi-label">Point de Retrait</div>
+            <div class="kpi-value">Dojo Central</div>
+          </div>
+        </div>
+
+        <!-- Onglets connectés -->
+        <div class="account-segmented account-segmented-3" role="tablist">
           <button type="button" class="account-tab-btn is-active" id="tab-member-orders-btn" data-logged-tab="orders">
-            <span class="tab-label-text">Mes Commandes<span class="tab-label-extra"> & Reçus</span></span>
+            <span class="tab-label-text">Commandes</span>
           </button>
           <button type="button" class="account-tab-btn" id="tab-member-profile-btn" data-logged-tab="profile">
-            <span class="tab-label-text">Préférences</span>
+            <span class="tab-label-text">Coordonnées</span>
+          </button>
+          <button type="button" class="account-tab-btn" id="tab-member-dojo-btn" data-logged-tab="dojo">
+            <span class="tab-label-text">Retrait Dojo</span>
           </button>
         </div>
 
-        <!-- Onglet 1 : Mes Commandes -->
+        <!-- Onglet 1 : Mes Commandes & Reçus -->
         <div class="account-tab-panel" id="logged-panel-orders">
           <div class="member-orders-container" id="member-orders-container">
             <!-- Dynamic order history -->
           </div>
         </div>
 
-        <!-- Onglet 2 : Préférences -->
+        <!-- Onglet 2 : Coordonnées & Tailles -->
         <div class="account-tab-panel" id="logged-panel-profile" hidden>
           <form class="account-form" id="member-profile-form">
+            <div class="form-section-title">Coordonnées personnelles</div>
             <div class="form-field">
               <label for="prof-name">Nom complet</label>
-              <input type="text" id="prof-name" name="name" required />
+              <div class="input-with-icon">
+                <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <input type="text" id="prof-name" name="name" required />
+              </div>
             </div>
             <div class="form-field">
-              <label for="prof-email">Email de connexion</label>
-              <input type="email" id="prof-email" disabled class="input-disabled" />
+              <div class="field-label-row">
+                <label for="prof-email">Adresse Email</label>
+                <span class="badge-locked">Identifiant Sécurisé</span>
+              </div>
+              <div class="input-with-icon">
+                <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                <input type="email" id="prof-email" disabled class="input-disabled" />
+              </div>
             </div>
             <div class="form-field">
-              <label for="prof-phone">Téléphone</label>
-              <input type="tel" id="prof-phone" name="phone" placeholder="06 12 34 56 78" />
+              <label for="prof-phone">Téléphone portable</label>
+              <div class="input-with-icon">
+                <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                <input type="tel" id="prof-phone" name="phone" placeholder="06 12 34 56 78" />
+              </div>
             </div>
+
+            <div class="form-section-title">Tailles habituelles pour vos commandes</div>
             <div class="form-row-2">
               <div class="form-field">
-                <label for="prof-rashguard-size">Taille habituelle Rashguard</label>
+                <label for="prof-rashguard-size">Taille Rashguard</label>
                 <select id="prof-rashguard-size" name="favoriteRashguardSize">
                   <option value="">Non renseignée</option>
                   <option value="XS">XS</option>
@@ -547,7 +657,7 @@
                 </select>
               </div>
               <div class="form-field">
-                <label for="prof-gloves-size">Taille habituelle Gants MMA</label>
+                <label for="prof-gloves-size">Taille Gants MMA</label>
                 <select id="prof-gloves-size" name="favoriteGlovesSize">
                   <option value="">Non renseignée</option>
                   <option value="S / M">S / M</option>
@@ -557,11 +667,56 @@
             </div>
             <div class="account-alert account-alert-success" id="profile-success-msg" hidden></div>
             <div class="account-alert account-alert-error" id="profile-error-msg" hidden></div>
-            <button type="submit" class="btn btn-primary btn-full" id="btn-save-profile">
-              <span>Enregistrer mes préférences</span>
+            <button type="submit" class="btn btn-primary btn-full btn-auth-submit" id="btn-save-profile">
+              <span>Enregistrer mes modifications</span>
             </button>
           </form>
         </div>
+
+        <!-- Onglet 3 : Retrait & Infos Dojo -->
+        <div class="account-tab-panel" id="logged-panel-dojo" hidden>
+          <div class="dojo-pickup-guide">
+            <div class="dojo-pickup-card">
+              <div class="pickup-card-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              </div>
+              <div class="pickup-card-content">
+                <h4>Lieu de Retrait des Commandes</h4>
+                <p><strong>Doragon Dojo Club</strong></p>
+                <p class="pickup-sub">Dojo principal des entraînements de Luta Livre / Grappling & MMA.</p>
+              </div>
+            </div>
+
+            <div class="dojo-pickup-card">
+              <div class="pickup-card-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <div class="pickup-card-content">
+                <h4>Créneaux de Retrait</h4>
+                <p>Directement sur place à l'accueil avant ou après chaque session de cours :</p>
+                <ul class="pickup-hours-list">
+                  <li><strong>Lundi au Vendredi :</strong> 18h00 — 21h30</li>
+                  <li><strong>Samedi :</strong> 10h00 — 13h00</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="dojo-pickup-card">
+              <div class="pickup-card-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <div class="pickup-card-content">
+                <h4>Comment Récupérer vos Articles ?</h4>
+                <ol class="pickup-steps-list">
+                  <li>Présentez votre <strong>reçu PDF</strong> sur smartphone ou donnez votre <strong>nom complet</strong>.</li>
+                  <li>Pour les <em>réservations</em>, règlement sur place en espèces ou carte bancaire.</li>
+                  <li>Essayage possible au dojo pour vérifier la taille avant de repartir.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
       </div> <!-- /.account-scroll-body -->
     </div>
