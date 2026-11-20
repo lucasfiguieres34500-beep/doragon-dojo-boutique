@@ -198,7 +198,7 @@ async function findUserByEmail(email) {
       const { data, error } = await supabase
         .from('members')
         .select('*')
-        .ilike('email', cleanEmail)
+        .eq('email', cleanEmail)
         .maybeSingle();
       if (error) throw error;
       if (!data) return null;

@@ -111,11 +111,21 @@
   }
 
   function escapeHtml(str) {
-    return String(str)
+    return String(str ?? '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function sanitizeImageUrl(url) {
+    const raw = String(url || '').trim();
+    if (!raw) return 'assets/logo.jpg';
+    if (/^(assets\/[\w./-]+\.(?:png|jpe?g|webp|gif|svg)|https:\/\/[^\s"'<>]+)$/i.test(raw)) {
+      return raw;
+    }
+    return 'assets/logo.jpg';
   }
 
   function showToast(message) {
@@ -486,7 +496,7 @@
         return `
         <article class="stock-card">
           <div class="stock-card-head">
-            <img src="${product.image}" alt="${escapeHtml(product.name)}" class="stock-card-img" />
+            <img src="${sanitizeImageUrl(product.image)}" alt="${escapeHtml(product.name)}" class="stock-card-img" />
             <div class="stock-card-meta">
               <h3>${escapeHtml(product.name)}</h3>
               <span class="stock-card-sub">${formatEuro(product.price)} · Total : <strong>${productTotal}</strong></span>

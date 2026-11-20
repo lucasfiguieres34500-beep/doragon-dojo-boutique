@@ -407,11 +407,21 @@
   }
 
   function escapeHtml(str) {
-    return String(str)
+    return String(str ?? '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function sanitizeImageUrl(url) {
+    const raw = String(url || '').trim();
+    if (!raw) return 'assets/logo.jpg';
+    if (/^(assets\/[\w./-]+\.(?:png|jpe?g|webp|gif|svg)|https:\/\/[^\s"'<>]+)$/i.test(raw)) {
+      return raw;
+    }
+    return 'assets/logo.jpg';
   }
 
   function prefersReducedMotion() {
@@ -422,7 +432,7 @@
     if (meta && meta.image) {
       els.toast.innerHTML = `
         <div class="toast-glass-row">
-          <img src="${meta.image}" alt="" class="toast-glass-thumb" />
+          <img src="${sanitizeImageUrl(meta.image)}" alt="" class="toast-glass-thumb" />
           <div class="toast-glass-text">
             <strong>${escapeHtml(meta.title)}</strong>
             <span>${escapeHtml(meta.subtitle)}</span>
@@ -564,7 +574,7 @@
         <article class="product-card" data-product-id="${product.id}" style="--card-index:${index};">
           <div class="product-media" data-action="open-details" data-product-id="${product.id}">
             ${product.badge ? `<span class="product-badge">${escapeHtml(product.badge)}</span>` : ''}
-            <img src="${product.image}" alt="${escapeHtml(product.name)}" loading="lazy" decoding="async" />
+            <img src="${sanitizeImageUrl(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy" decoding="async" />
           </div>
           <div class="product-body">
             <div class="product-top-row">
@@ -967,7 +977,7 @@
       .map(
         ({ product, size, qty, lineTotal }) => `
       <li class="cart-item">
-        <img src="${product.image}" alt="${escapeHtml(product.name)}" class="cart-item-img" />
+        <img src="${sanitizeImageUrl(product.image)}" alt="${escapeHtml(product.name)}" class="cart-item-img" />
         <div class="cart-item-info">
           <p class="cart-item-title">${escapeHtml(product.name)}</p>
           <div class="cart-item-meta">Taille : <strong>${escapeHtml(size)}</strong></div>
@@ -1058,7 +1068,7 @@
                 .map(
                   (img, i) => `
                 <div class="product-gallery-slide ${i === 0 ? 'is-active' : ''}" data-slide-index="${i}">
-                  <img src="${img.src}" alt="${escapeHtml(product.name)} - ${escapeHtml(img.label)}" class="product-modal-img" />
+                  <img src="${sanitizeImageUrl(img.src)}" alt="${escapeHtml(product.name)} - ${escapeHtml(img.label)}" class="product-modal-img" />
                 </div>
               `,
                 )
@@ -1394,7 +1404,7 @@
             .map(
               (it) => `
             <div class="confirm-item-row">
-              ${it.image ? `<img src="${it.image}" alt="${escapeHtml(it.name)}" class="confirm-item-thumb" onerror="this.style.display='none'" />` : ''}
+              ${it.image ? `<img src="${sanitizeImageUrl(it.image)}" alt="${escapeHtml(it.name)}" class="confirm-item-thumb" onerror="this.style.display='none'" />` : ''}
               <div class="confirm-item-info">
                 <p class="confirm-item-name">${escapeHtml(it.name)}</p>
                 <div class="confirm-item-meta">Taille <strong>${escapeHtml(it.size)}</strong> · Qté ${it.qty}</div>

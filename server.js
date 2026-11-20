@@ -3,6 +3,12 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const Stripe = require('stripe');
+let sharp = null;
+try {
+  sharp = require('sharp');
+} catch (_) {
+  sharp = null;
+}
 
 loadEnv(path.join(__dirname, '.env'));
 
@@ -51,6 +57,13 @@ const resetService = createPasswordReset({
 });
 const rateAllowed = createRateLimiter();
 function runMaintenance() {
+  const now = Date.now();
+  for (const [token, expiresAt] of activeSessions) {
+    if (now > expiresAt) activeSessions.delete(token);
+  }
+  for (const [token, session] of activeMemberSessions) {
+    if (now > session.expiresAt) activeMemberSessions.delete(token);
+  }
   operations
     .tick()
     .catch(() => console.error('[Boutique] Traitement automatique à réessayer.'));
@@ -111,17 +124,30 @@ function ensureDataDir() {
   }
 }
 
-function saveUploadedImage(dataUrl, slug) {
+async function saveUploadedImage(dataUrl, slug) {
   const match = String(dataUrl || '').match(
     /^data:image\/(png|jpeg|jpg|webp|gif);base64,([A-Za-z0-9+/=]+)$/,
   );
   if (!match) return null;
-  const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
   const buffer = Buffer.from(match[2], 'base64');
+  if (buffer.length > 5 * 1024 * 1024) {
+    throw new OrderError('Image trop volumineuse (maximum 5 Mo).', 400);
+  }
   if (!fs.existsSync(UPLOADS_DIR)) {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   }
   const safeSlug = slug.replace(/[^a-z0-9-]/gi, '').slice(0, 32) || 'article';
+
+  if (sharp) {
+    const filename = `${safeSlug}-${Date.now()}.webp`;
+    await sharp(buffer)
+      .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 85 })
+      .toFile(path.join(UPLOADS_DIR, filename));
+    return `assets/uploads/${filename}`;
+  }
+
+  const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
   const filename = `${safeSlug}-${Date.now()}.${ext}`;
   fs.writeFileSync(path.join(UPLOADS_DIR, filename), buffer);
   return `assets/uploads/${filename}`;
@@ -147,10 +173,33 @@ async function readBody(req) {
   return Buffer.concat(chunks);
 }
 
+function isSecureConnection(req) {
+  return Boolean(
+    req?.socket?.encrypted ||
+      req?.headers?.['x-forwarded-proto'] === 'https' ||
+      process.env.NODE_ENV === 'production' ||
+      process.env.RENDER,
+  );
+}
+
+function getSecurityHeaders(req) {
+  const headers = {
+    'X-Frame-Options': 'SAMEORIGIN',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+  };
+  if (isSecureConnection(req)) {
+    headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains';
+  }
+  return headers;
+}
+
 function sendJson(res, statusCode, data, extraHeaders = {}) {
+  const sec = getSecurityHeaders(res.req);
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
+    ...sec,
     ...extraHeaders,
   });
   res.end(JSON.stringify(data));
@@ -184,16 +233,18 @@ function isAuthenticated(req) {
   return true;
 }
 
-function createSessionCookie(res) {
+function createSessionCookie(res, req) {
   const token = crypto.randomBytes(24).toString('hex');
   activeSessions.set(token, Date.now() + SESSION_TTL_MS);
-  return `${SESSION_COOKIE}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_TTL_MS / 1000}`;
+  const secure = isSecureConnection(req || res?.req) ? '; Secure' : '';
+  return `${SESSION_COOKIE}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_TTL_MS / 1000}${secure}`;
 }
 
 function clearSession(req) {
   const token = parseCookies(req)[SESSION_COOKIE];
   if (token) activeSessions.delete(token);
-  return `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`;
+  const secure = isSecureConnection(req) ? '; Secure' : '';
+  return `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure}`;
 }
 
 function verifyPassword(candidate) {
@@ -268,20 +319,22 @@ async function getAuthenticatedMember(req) {
   return user;
 }
 
-function createMemberSession(userId, passwordHash) {
+function createMemberSession(userId, passwordHash, req) {
   const token = crypto.randomBytes(32).toString('hex');
   activeMemberSessions.set(token, {
     userId,
     passwordHash,
     expiresAt: Date.now() + MEMBER_SESSION_TTL_MS,
   });
-  return `${MEMBER_SESSION_COOKIE}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${MEMBER_SESSION_TTL_MS / 1000}`;
+  const secure = isSecureConnection(req) ? '; Secure' : '';
+  return `${MEMBER_SESSION_COOKIE}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${MEMBER_SESSION_TTL_MS / 1000}${secure}`;
 }
 
 function clearMemberSession(req) {
   const token = parseCookies(req)[MEMBER_SESSION_COOKIE];
   if (token) activeMemberSessions.delete(token);
-  return `${MEMBER_SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`;
+  const secure = isSecureConnection(req) ? '; Secure' : '';
+  return `${MEMBER_SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure}`;
 }
 
 function serveStatic(reqPath, res) {
@@ -324,14 +377,16 @@ function serveStatic(reqPath, res) {
       res.writeHead(304);
       return res.end();
     }
+    const sec = getSecurityHeaders(res.req);
     res.writeHead(200, {
       'Content-Type':
         MIME_TYPES[path.extname(fullPath).toLowerCase()] || 'application/octet-stream',
       'Content-Length': stat.size,
       'Cache-Control': isAsset ? 'public, max-age=3600' : 'no-cache',
       ETag: etag,
-      'X-Content-Type-Options': 'nosniff',
-      'Referrer-Policy': 'no-referrer',
+      ...sec,
+      'Content-Security-Policy':
+        "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; connect-src 'self' https://api.stripe.com https://*.supabase.co wss://*.supabase.co;",
     });
     const stream = fs.createReadStream(fullPath);
     stream.on('error', () => res.destroy());
@@ -448,8 +503,11 @@ async function handleRequest(req, res) {
   }
 
   if (req.method === 'GET' && urlPath === '/api/health') {
+    const admin = isAuthenticated(req);
+    const base = { ok: true, status: 'healthy' };
+    if (!admin) return sendJson(res, 200, base);
     return sendJson(res, 200, {
-      ok: true,
+      ...base,
       emailConfigured: isSmtpConfigured(),
       stripeConfigured: Boolean(stripe),
       database: db.isSupabaseConfigured() ? 'supabase' : 'local-json',
@@ -602,12 +660,19 @@ async function handleRequest(req, res) {
   }
 
   if (req.method === 'POST' && urlPath === '/api/admin/login') {
+    const client = req.socket?.remoteAddress || 'unknown';
+    if (!rateAllowed('admin-login-ip:' + client, 10, 15 * 60000)) {
+      return sendJson(res, 429, {
+        ok: false,
+        error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.',
+      });
+    }
     try {
       const body = await readJsonBody(req);
       if (!verifyPassword(body.password)) {
         return sendJson(res, 401, { ok: false, error: 'Mot de passe incorrect.' });
       }
-      const cookie = createSessionCookie(res);
+      const cookie = createSessionCookie(res, req);
       return sendJson(res, 200, { ok: true, authenticated: true }, { 'Set-Cookie': cookie });
     } catch (err) {
       return sendJson(res, 400, { ok: false, error: err.message });
@@ -655,10 +720,10 @@ async function handleRequest(req, res) {
       if (!email || !email.includes('@')) {
         return sendJson(res, 400, { ok: false, error: 'Adresse email valide requise.' });
       }
-      if (!password || password.length < 6) {
+      if (!password || password.length < 8) {
         return sendJson(res, 400, {
           ok: false,
-          error: 'Le mot de passe doit comporter au moins 6 caractères.',
+          error: 'Le mot de passe doit comporter au moins 8 caractères.',
         });
       }
 
@@ -690,7 +755,7 @@ async function handleRequest(req, res) {
         .sendWelcomeEmail(newUser)
         .catch((e) => console.error('[Mailer] Erreur welcome:', e.message));
 
-      const cookie = createMemberSession(newUser.id, newUser.hash);
+      const cookie = createMemberSession(newUser.id, newUser.hash, req);
       return sendJson(
         res,
         200,
@@ -708,6 +773,13 @@ async function handleRequest(req, res) {
   }
 
   if (req.method === 'POST' && urlPath === '/api/member/login') {
+    const client = req.socket?.remoteAddress || 'unknown';
+    if (!rateAllowed('member-login-ip:' + client, 30, 15 * 60000)) {
+      return sendJson(res, 429, {
+        ok: false,
+        error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.',
+      });
+    }
     try {
       const body = await readJsonBody(req);
       const email = String(body.email || '')
@@ -717,6 +789,14 @@ async function handleRequest(req, res) {
 
       if (!email || !password) {
         return sendJson(res, 400, { ok: false, error: 'Email et mot de passe requis.' });
+      }
+
+      const emailHash = crypto.createHash('sha256').update(email).digest('hex').slice(0, 16);
+      if (!rateAllowed('member-login-acc:' + emailHash, 10, 15 * 60000)) {
+        return sendJson(res, 429, {
+          ok: false,
+          error: 'Trop de tentatives infructueuses sur ce compte. Réessayez dans 15 minutes.',
+        });
       }
 
       const user = await db.findUserByEmail(email);
@@ -729,7 +809,7 @@ async function handleRequest(req, res) {
         return sendJson(res, 401, { ok: false, error: 'Email ou mot de passe incorrect.' });
       }
 
-      const cookie = createMemberSession(user.id, user.hash);
+      const cookie = createMemberSession(user.id, user.hash, req);
       const memberOrders = await db.getOrdersForMember(user.id, user.email);
 
       return sendJson(
@@ -810,14 +890,16 @@ async function handleRequest(req, res) {
       if (!verifyPassword(currentPassword)) {
         return sendJson(res, 400, { ok: false, error: 'Mot de passe actuel incorrect.' });
       }
-      if (newPassword.length < 4) {
+      if (newPassword.length < 8) {
         return sendJson(res, 400, {
           ok: false,
-          error: 'Le nouveau mot de passe doit contenir au moins 4 caractères.',
+          error: 'Le nouveau mot de passe doit contenir au moins 8 caractères.',
         });
       }
       saveAdminPassword(newPassword);
-      return sendJson(res, 200, { ok: true });
+      activeSessions.clear();
+      const cookie = createSessionCookie(res, req);
+      return sendJson(res, 200, { ok: true }, { 'Set-Cookie': cookie });
     } catch (err) {
       return sendJson(res, 400, { ok: false, error: err.message });
     }
@@ -877,7 +959,7 @@ async function handleRequest(req, res) {
 
       let image = 'assets/logo.jpg';
       if (body.imageDataUrl) {
-        const savedImg = saveUploadedImage(body.imageDataUrl, slug);
+        const savedImg = await saveUploadedImage(body.imageDataUrl, slug);
         if (savedImg) image = savedImg;
       }
 
@@ -1026,6 +1108,14 @@ const server = http.createServer((req, res) => {
   });
 });
 if (require.main === module) {
+  if (
+    (process.env.NODE_ENV === 'production' || process.env.RENDER) &&
+    (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD === 'doragon2026')
+  ) {
+    console.warn(
+      '[SÉCURITÉ] ADMIN_PASSWORD utilise la valeur par défaut ou est absent. Définissez un mot de passe fort sur Render.',
+    );
+  }
   runMaintenance();
   const timer = setInterval(runMaintenance, 60000);
   timer.unref();
