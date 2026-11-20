@@ -1022,7 +1022,7 @@
       })
       .join('');
 
-    const galleryImages =
+    let galleryImages =
       Array.isArray(product.images) && product.images.length > 0
         ? product.images
         : product.id === 'rashguard-mc'
@@ -1035,9 +1035,17 @@
             ? [
                 { src: 'assets/rashguard-camo-front-white.jpg', label: 'Face' },
                 { src: 'assets/rashguard-camo-back-white.jpg', label: 'Dos' },
-                { src: 'assets/rashguard-camo.jpg', label: 'Vue 360°' },
               ]
             : [{ src: product.image || 'assets/gants-mma.jpg', label: 'Face' }];
+
+    if (
+      product.id === 'rashguard-camo' ||
+      (product.badge && product.badge.toLowerCase().includes('2027'))
+    ) {
+      galleryImages = galleryImages.filter(
+        (img) => !/360/i.test(img.label || '') && !img.src.endsWith('rashguard-camo.jpg'),
+      );
+    }
 
     let activeImageIndex = 0;
 

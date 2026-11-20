@@ -43,8 +43,7 @@
       image: 'assets/rashguard-camo-front-white.jpg',
       images: [
         { src: 'assets/rashguard-camo-front-white.jpg', label: 'Face' },
-        { src: 'assets/rashguard-camo-back-white.jpg', label: 'Dos' },
-        { src: 'assets/rashguard-camo.jpg', label: 'Vue 360°' }
+        { src: 'assets/rashguard-camo-back-white.jpg', label: 'Dos' }
       ],
       badge: 'Édition 2027',
       shortDesc: '',
